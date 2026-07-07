@@ -23,8 +23,34 @@ services:
     networks:
       - dataforge-network
 
+  redis:
+    image: redis:8
+
+    container_name: dataforge-redis
+
+    restart: unless-stopped
+
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - ../../docker/redis/conf/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis_data:/data
+
+    networks:
+      - dataforge-network
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   dataforge-network:
