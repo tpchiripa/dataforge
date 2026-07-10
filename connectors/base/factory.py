@@ -1,19 +1,28 @@
 """
 DataForge Connector Factory
 
-Responsible for creating connector instances from the registry.
+Creates connector instances from the ConnectorRegistry.
 
-Example:
+Example
+-------
+
+from connectors.base import ConnectorConfig, ConnectorFactory
+
+config = ConnectorConfig(
+    name="Metadata Database",
+    connector_type=ConnectorType.DATABASE,
+    host="localhost",
+    port=5433,
+    database="dataforge",
+    username="dataforge",
+    password="DataForge2026!",
+)
 
 factory = ConnectorFactory()
 
 connector = factory.create(
-    "postgres",
-    host="localhost",
-    port=5432,
-    database="sales",
-    username="admin",
-    password="secret",
+    "postgresql",
+    config,
 )
 
 connector.connect()
@@ -21,50 +30,66 @@ connector.connect()
 
 from __future__ import annotations
 
-from typing import Any
-
+from .connector import BaseConnector
 from .exceptions import ConnectorNotFoundError
 from .registry import ConnectorRegistry
+from .types import ConnectorConfig
 
 
 class ConnectorFactory:
     """
-    Creates connector instances.
+    Factory responsible for creating connector instances.
 
-    The factory hides connector implementation details from the rest
-    of the platform.
+    The factory isolates the rest of DataForge from concrete
+    connector implementations.
 
-    Other DataForge modules only interact with this factory.
+    Connectors are created dynamically from the registry.
     """
 
     def __init__(self, registry: ConnectorRegistry | None = None):
+
         self.registry = registry or ConnectorRegistry()
 
-    def create(self, connector_name: str, **kwargs: Any):
+    # ---------------------------------------------------------
+    # Public API
+    # ---------------------------------------------------------
+
+    def create(
+        self,
+        connector_name: str,
+        config: ConnectorConfig,
+    ) -> BaseConnector:
         """
         Create a connector instance.
 
         Parameters
         ----------
-        connector_name:
+        connector_name
             Registered connector name.
 
-        kwargs:
-            Configuration passed directly to connector constructor.
+        config
+            Connector configuration.
+
+        Returns
+        -------
+        BaseConnector
         """
 
         connector_class = self.registry.get(connector_name)
 
         if connector_class is None:
+
             raise ConnectorNotFoundError(
                 f"Connector '{connector_name}' is not registered."
             )
 
-        return connector_class(**kwargs)
+        return connector_class(config)
+
+    # ---------------------------------------------------------
 
     def available_connectors(self) -> list[str]:
         """
-        Return registered connector names.
+        Return all registered connectors.
         """
 
-        return sorted(self.registry.list_connectors())
+        return self.registry.list_connectors()

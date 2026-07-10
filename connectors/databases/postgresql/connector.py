@@ -115,7 +115,11 @@ class PostgreSQLConnector(BaseConnector):
 
     # ---------------------------------------------------------
 
-    def get_metadata(self):
+    @staticmethod
+    def get_metadata() -> ConnectorMetadata:
+        """
+        Return metadata describing this connector.
+        """
 
         return ConnectorMetadata(
             name="PostgreSQL",
