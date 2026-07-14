@@ -36,7 +36,7 @@ x-airflow-common: &airflow-common
     # Webserver
     AIRFLOW__WEBSERVER__BASE_URL: ${AIRFLOW__WEBSERVER__BASE_URL}
 
-    # Celery (Future)
+    # Celery
     AIRFLOW__CELERY__BROKER_URL: ${AIRFLOW__CELERY__BROKER_URL}
     AIRFLOW__CELERY__RESULT_BACKEND: ${AIRFLOW__CELERY__RESULT_BACKEND}
 
@@ -49,8 +49,12 @@ x-airflow-common: &airflow-common
   depends_on:
     postgres:
       condition: service_healthy
+
     redis:
       condition: service_healthy
+
+    minio-init:
+      condition: service_completed_successfully
 
   networks:
     - dataforge-network
@@ -116,6 +120,66 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+    networks:
+      - dataforge-network
+
+  # ==================================================
+  # MinIO Object Storage
+  # ==================================================
+
+  minio:
+    image: minio/minio:latest
+
+    container_name: dataforge-minio
+
+    restart: unless-stopped
+
+    env_file:
+      - ../../.env
+
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+
+    command: server /data --console-address ":9001"
+
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+    volumes:
+      - ../../docker/minio/data:/data
+      - ../../docker/minio/config:/root/.minio
+
+    networks:
+      - dataforge-network
+
+  # ==================================================
+  # MinIO Bucket Initialization
+  # ==================================================
+
+  minio-init:
+    image: minio/mc:latest
+
+    container_name: dataforge-minio-init
+
+    restart: "no"
+
+    env_file:
+      - ../../.env
+
+    depends_on:
+      - minio
+
+    volumes:
+      - ../../docker/minio/init:/init
+
+    entrypoint: >
+      /bin/sh -c "
+      chmod +x /init/create_buckets.sh &&
+      /init/create_buckets.sh
+      "
 
     networks:
       - dataforge-network
