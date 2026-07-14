@@ -1,13 +1,14 @@
 """
 DataForge Connector Framework
 
-Core SDK for building DataForge connectors.
+Core framework for building DataForge connectors.
 """
 
-from .connector import BaseConnector
+from .base_connector import BaseConnector
 
-from .factory import ConnectorFactory
 from .registry import ConnectorRegistry
+from .factory import ConnectorFactory
+from .manager import ConnectorManager
 
 from .types import (
     AuthenticationType,
@@ -43,9 +44,9 @@ from .exceptions import (
 
 __all__ = [
     "BaseConnector",
-    "ConnectorFactory",
     "ConnectorRegistry",
-
+    "ConnectorFactory",
+    "ConnectorManager",
     "AuthenticationType",
     "ConnectionResult",
     "ConnectionStatus",
@@ -55,7 +56,6 @@ __all__ = [
     "DatasetInfo",
     "ExtractionResult",
     "PipelineMode",
-
     "ConnectorError",
     "ConfigurationError",
     "ConnectionFailedError",

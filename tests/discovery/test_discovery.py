@@ -2,15 +2,8 @@
 DataForge Discovery Tests
 """
 
-from connectors.base import ConnectorRegistry
+from connectors.base.registry import ConnectorRegistry
 from connectors.discovery.discovery import ConnectorDiscovery
-
-
-def setup_function():
-    """
-    Ensure every test starts with a clean registry.
-    """
-    ConnectorRegistry.clear()
 
 
 def test_discovery_finds_connectors():
@@ -19,10 +12,12 @@ def test_discovery_finds_connectors():
 
     connectors = discovery.discover()
 
-    assert len(connectors) >= 1
+    assert len(connectors) > 0
 
 
 def test_discovery_registers_postgresql():
+
+    ConnectorRegistry.clear()
 
     discovery = ConnectorDiscovery("connectors")
 
@@ -37,4 +32,28 @@ def test_discovery_returns_connector_classes():
 
     connectors = discovery.discover()
 
-    assert connectors[0].__name__ == "PostgreSQLConnector"
+    assert all(isinstance(connector, type) for connector in connectors)
+
+
+def test_discovery_returns_postgresql_connector():
+
+    discovery = ConnectorDiscovery("connectors")
+
+    connectors = discovery.discover()
+
+    names = [connector.__name__ for connector in connectors]
+
+    assert "PostgreSQLConnector" in names
+
+
+def test_registry_returns_postgresql_connector():
+
+    ConnectorRegistry.clear()
+
+    discovery = ConnectorDiscovery("connectors")
+
+    discovery.discover()
+
+    connector_class = ConnectorRegistry.get("postgresql")
+
+    assert connector_class.__name__ == "PostgreSQLConnector"

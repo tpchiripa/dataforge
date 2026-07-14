@@ -1,54 +1,38 @@
 """
 DataForge Connector Factory
 
-Creates connector instances from the ConnectorRegistry.
+Responsible for creating connector instances from the
+ConnectorRegistry.
 
-Example
--------
-
-from connectors.base import ConnectorConfig, ConnectorFactory
-
-config = ConnectorConfig(
-    name="Metadata Database",
-    connector_type=ConnectorType.DATABASE,
-    host="localhost",
-    port=5433,
-    database="dataforge",
-    username="dataforge",
-    password="DataForge2026!",
-)
-
-factory = ConnectorFactory()
-
-connector = factory.create(
-    "postgresql",
-    config,
-)
-
-connector.connect()
+The factory decouples the rest of DataForge from concrete
+connector implementations.
 """
 
 from __future__ import annotations
 
-from .connector import BaseConnector
+from connectors.config.connector_config import ConnectorConfig
+
+from .base_connector import BaseConnector
 from .exceptions import ConnectorNotFoundError
 from .registry import ConnectorRegistry
-from .types import ConnectorConfig
 
 
 class ConnectorFactory:
     """
-    Factory responsible for creating connector instances.
-
-    The factory isolates the rest of DataForge from concrete
-    connector implementations.
-
-    Connectors are created dynamically from the registry.
+    Factory responsible for creating DataForge connectors.
     """
 
-    def __init__(self, registry: ConnectorRegistry | None = None):
+    def __init__(
+        self,
+        registry: ConnectorRegistry | None = None,
+    ) -> None:
 
-        self.registry = registry or ConnectorRegistry()
+        # Always use the global registry unless another is supplied.
+        self._registry = (
+            registry
+            if registry is not None
+            else ConnectorRegistry
+        )
 
     # ---------------------------------------------------------
     # Public API
@@ -61,35 +45,65 @@ class ConnectorFactory:
     ) -> BaseConnector:
         """
         Create a connector instance.
-
-        Parameters
-        ----------
-        connector_name
-            Registered connector name.
-
-        config
-            Connector configuration.
-
-        Returns
-        -------
-        BaseConnector
         """
 
-        connector_class = self.registry.get(connector_name)
-
-        if connector_class is None:
-
+        if not self._registry.exists(
+            connector_name
+        ):
             raise ConnectorNotFoundError(
                 f"Connector '{connector_name}' is not registered."
             )
+
+        connector_class = self._registry.get(
+            connector_name
+        )
 
         return connector_class(config)
 
     # ---------------------------------------------------------
 
-    def available_connectors(self) -> list[str]:
+    def exists(
+        self,
+        connector_name: str,
+    ) -> bool:
         """
-        Return all registered connectors.
+        Determine whether a connector is registered.
         """
 
-        return self.registry.list_connectors()
+        return self._registry.exists(
+            connector_name
+        )
+
+    # ---------------------------------------------------------
+
+    def available_connectors(
+        self,
+    ) -> list[str]:
+        """
+        Return all registered connector names.
+        """
+
+        return self._registry.list_connectors()
+
+    # ---------------------------------------------------------
+
+    @property
+    def registry(
+        self,
+    ):
+        """
+        Return the registry.
+        """
+
+        return self._registry
+
+    # ---------------------------------------------------------
+
+    def __repr__(
+        self,
+    ) -> str:
+
+        return (
+            "ConnectorFactory("
+            f"connectors={self._registry.count()})"
+        )

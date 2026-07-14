@@ -16,6 +16,10 @@ from pipelines.core.pipeline import Pipeline
 class PipelineRegistry:
     """
     Registry responsible for storing and managing pipelines.
+
+    The registry is implemented as a singleton using class-level
+    storage so that pipelines are available globally throughout
+    the DataForge runtime.
     """
 
     _pipelines: dict[str, Pipeline] = {}
@@ -116,16 +120,6 @@ class PipelineRegistry:
     # ---------------------------------------------------------
 
     @classmethod
-    def count(cls) -> int:
-        """
-        Return the number of registered pipelines.
-        """
-
-        return len(cls._pipelines)
-
-    # ---------------------------------------------------------
-
-    @classmethod
     def clear(cls) -> None:
         """
         Remove every registered pipeline.
@@ -136,11 +130,56 @@ class PipelineRegistry:
         cls._pipelines.clear()
 
     # ---------------------------------------------------------
+    # Convenience Properties
+    # ---------------------------------------------------------
 
-    @classmethod
+    @property
+    def count(self) -> int:
+        """
+        Number of registered pipelines.
+        """
+
+        return len(self._pipelines)
+
+    # ---------------------------------------------------------
+
+    def __len__(self) -> int:
+        """
+        Return registry size.
+        """
+
+        return len(self._pipelines)
+
+    # ---------------------------------------------------------
+
+    def __iter__(self):
+        """
+        Iterate over registered pipelines.
+        """
+
+        return iter(self._pipelines.values())
+
+    # ---------------------------------------------------------
+
     def __contains__(
-        cls,
+        self,
         pipeline_name: str,
     ) -> bool:
+        """
+        Support:
+            "etl" in registry
+        """
 
-        return cls.exists(pipeline_name)
+        return self.exists(pipeline_name)
+
+    # ---------------------------------------------------------
+
+    def __repr__(self) -> str:
+        """
+        String representation.
+        """
+
+        return (
+            f"PipelineRegistry("
+            f"count={len(self._pipelines)})"
+        )

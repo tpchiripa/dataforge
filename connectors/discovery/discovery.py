@@ -54,15 +54,26 @@ class ConnectorDiscovery:
 
         for connector_file in connector_files:
 
-            connector_class = self.loader.load(connector_file)
+            try:
+                connector_class = self.loader.load(connector_file)
 
-            # Folder containing connector.py
+            except Exception:
+                # Skip connector templates or incomplete implementations.
+                continue
+
+            # Register using the connector folder name
+            # Example:
+            # connectors/databases/postgresql/postgres_connector.py
+            #                     ↑
+            #                 "postgresql"
             connector_name = connector_file.parent.name.lower()
 
-            ConnectorRegistry.register(
-                connector_name,
-                connector_class,
-            )
+            if not ConnectorRegistry.exists(connector_name):
+
+                ConnectorRegistry.register(
+                    connector_name,
+                    connector_class,
+                )
 
             discovered.append(connector_class)
 
@@ -70,9 +81,19 @@ class ConnectorDiscovery:
 
     # ------------------------------------------------------------------
 
-    def registry(self) -> ConnectorRegistry:
+    @property
+    def registry(self):
         """
-        Return the registry.
+        Return the connector registry.
         """
 
         return ConnectorRegistry
+
+    # ------------------------------------------------------------------
+
+    def __repr__(self) -> str:
+
+        return (
+            "ConnectorDiscovery("
+            f"directory='{self.connectors_directory}')"
+        )

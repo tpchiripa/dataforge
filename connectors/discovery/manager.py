@@ -1,117 +1,60 @@
 """
-DataForge Connector Manager
+DataForge Discovery Manager
 
 High-level interface for the DataForge Connector Discovery
 subsystem.
-
-The ConnectorManager coordinates:
-
-- Discovery
-- Registry
-- Factory
-- Catalog
-- Inspector
-
-It provides a single entry point for interacting with
-connectors throughout the platform.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from connectors.base import (
-    ConnectorConfig,
-    ConnectorFactory,
-    ConnectorRegistry,
-)
+from connectors.base.factory import ConnectorFactory
+from connectors.base.registry import ConnectorRegistry
+from connectors.config.connector_config import ConnectorConfig
 
-from connectors.discovery.catalog import ConnectorCatalog
-from connectors.discovery.discovery import ConnectorDiscovery
-from connectors.discovery.inspector import ConnectorInspector
+from .catalog import ConnectorCatalog
+from .discovery import ConnectorDiscovery
+from .inspector import ConnectorInspector
 
 
-class ConnectorManager:
+class DiscoveryManager:
     """
-    High-level interface for the Connector SDK.
-
-    Other DataForge modules should interact with this class
-    instead of using Discovery, Registry, Factory or Catalog
-    directly.
+    High-level manager for connector discovery.
     """
 
-    def __init__(self, connectors_directory: str | Path):
+    def __init__(
+        self,
+        connectors_directory: str | Path = "connectors",
+    ) -> None:
 
-        self.registry = ConnectorRegistry()
+        self.discovery = ConnectorDiscovery(
+            connectors_directory
+        )
 
-        self.discovery = ConnectorDiscovery(connectors_directory)
+        self.catalog = ConnectorCatalog(
+            connectors_directory
+        )
 
-        self.factory = ConnectorFactory(self.registry)
+        self.inspector = ConnectorInspector()
 
-        self.catalog = ConnectorCatalog(self.registry)
-
-        self.inspector = ConnectorInspector(self.registry)
+        self.factory = ConnectorFactory()
 
     # ---------------------------------------------------------
     # Discovery
     # ---------------------------------------------------------
 
     def discover(self):
-        """
-        Discover and register all connectors.
-        """
 
         return self.discovery.discover()
 
-    # ---------------------------------------------------------
-    # Catalog
-    # ---------------------------------------------------------
+    def refresh(self):
 
-    def list(self):
-        """
-        Return metadata for every registered connector.
-        """
+        ConnectorRegistry.clear()
 
-        return self.catalog.list()
+        self.discovery.discover()
 
-    def get(self, connector_name: str):
-        """
-        Return metadata for a connector.
-        """
-
-        return self.catalog.get(connector_name)
-
-    def exists(self, connector_name: str):
-        """
-        Check whether a connector exists.
-        """
-
-        return self.catalog.exists(connector_name)
-
-    def count(self):
-        """
-        Return the number of registered connectors.
-        """
-
-        return self.catalog.count()
-
-    # ---------------------------------------------------------
-    # Inspection
-    # ---------------------------------------------------------
-
-    def inspect(self, connector_name: str):
-        """
-        Inspect a connector.
-        """
-
-        return self.inspector.inspect(connector_name)
-
-    def inspect_all(self):
-        """
-        Inspect every connector.
-        """
-
-        return self.inspector.inspect_all()
+        return self.catalog.refresh()
 
     # ---------------------------------------------------------
     # Factory
@@ -122,9 +65,6 @@ class ConnectorManager:
         connector_name: str,
         config: ConnectorConfig,
     ):
-        """
-        Create a connector instance.
-        """
 
         return self.factory.create(
             connector_name,
@@ -135,18 +75,123 @@ class ConnectorManager:
     # Registry
     # ---------------------------------------------------------
 
-    def registered_connectors(self):
+    def registered_connectors(
+        self,
+    ) -> list[str]:
+
+        return ConnectorRegistry.list_connectors()
+
+    def clear_registry(
+        self,
+    ) -> None:
+
+        ConnectorRegistry.clear()
+
+    # ---------------------------------------------------------
+    # Backwards Compatibility
+    # ---------------------------------------------------------
+
+    def clear(
+        self,
+    ) -> None:
         """
-        Return all registered connector names.
+        Backwards-compatible alias for clear_registry().
         """
 
-        return self.registry.list_connectors()
+        self.clear_registry()
 
-    def clear(self):
-        """
-        Clear the connector registry.
+    # ---------------------------------------------------------
+    # Catalog
+    # ---------------------------------------------------------
 
-        Mainly useful during testing.
-        """
+    def connectors(
+        self,
+    ) -> list[str]:
 
-        self.registry.clear()
+        return self.catalog.list()
+
+    def connector(
+        self,
+        name: str,
+    ) -> dict | None:
+
+        return self.catalog.get(name)
+
+    def exists(
+        self,
+        name: str,
+    ) -> bool:
+
+        return self.catalog.exists(name)
+
+    def search(
+        self,
+        keyword: str,
+    ):
+
+        return self.catalog.search(keyword)
+
+    # ---------------------------------------------------------
+    # Inspection
+    # ---------------------------------------------------------
+
+    def inspect(
+        self,
+        connector,
+    ):
+
+        return self.inspector.inspect(
+            connector
+        )
+
+    # ---------------------------------------------------------
+
+    def count(
+        self,
+    ) -> int:
+
+        return self.catalog.count()
+
+    # ---------------------------------------------------------
+
+    def __len__(
+        self,
+    ) -> int:
+
+        return self.count()
+
+    def __contains__(
+        self,
+        connector_name: str,
+    ) -> bool:
+
+        return self.exists(
+            connector_name
+        )
+
+    def __iter__(
+        self,
+    ):
+
+        return iter(self.catalog)
+
+    def __repr__(
+        self,
+    ) -> str:
+
+        return (
+            "DiscoveryManager("
+            f"connectors={self.count()})"
+        )
+
+
+# ==========================================================
+# Backwards Compatibility
+# ==========================================================
+
+ConnectorManager = DiscoveryManager
+
+__all__ = [
+    "DiscoveryManager",
+    "ConnectorManager",
+]

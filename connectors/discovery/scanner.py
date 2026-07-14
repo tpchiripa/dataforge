@@ -3,17 +3,6 @@ DataForge Connector Scanner
 
 Scans the DataForge connectors directory and discovers connector
 implementations.
-
-Responsibilities
-----------------
-- Walk the connectors directory
-- Locate connector.py modules
-- Ignore framework directories
-- Return discovered connector paths
-
-The scanner performs NO imports.
-
-Importing is handled by the ConnectorLoader.
 """
 
 from __future__ import annotations
@@ -23,7 +12,7 @@ from pathlib import Path
 
 class ConnectorScanner:
     """
-    Discovers connector modules within the DataForge project.
+    Discovers connector implementation files.
     """
 
     IGNORE_DIRECTORIES = {
@@ -32,22 +21,25 @@ class ConnectorScanner:
         "discovery",
     }
 
-    def __init__(self, root_directory: str | Path):
+    def __init__(
+        self,
+        root_directory: str | Path,
+    ):
 
-        self.root_directory = Path(root_directory).resolve()
+        self.root_directory = Path(
+            root_directory
+        ).resolve()
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
 
     def scan(self) -> list[Path]:
         """
-        Scan the connectors directory.
+        Return every connector implementation.
 
-        Returns
-        -------
-        list[Path]
-            Sorted list of connector.py files.
+        Supports both:
+
+        connector.py
+        *_connector.py
         """
 
         connector_files: list[Path] = []
@@ -55,25 +47,30 @@ class ConnectorScanner:
         if not self.root_directory.exists():
             return connector_files
 
-        for path in self.root_directory.rglob("connector.py"):
+        for path in self.root_directory.rglob("*.py"):
 
             if self._should_ignore(path):
                 continue
 
-            connector_files.append(path)
+            if path.name == "__init__.py":
+                continue
+
+            if (
+                path.name == "connector.py"
+                or path.name.endswith("_connector.py")
+            ):
+                connector_files.append(path)
 
         connector_files.sort()
 
         return connector_files
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
 
-    def _should_ignore(self, path: Path) -> bool:
-        """
-        Determine whether a discovered path should be ignored.
-        """
+    def _should_ignore(
+        self,
+        path: Path,
+    ) -> bool:
 
         for part in path.parts:
 
@@ -84,3 +81,12 @@ class ConnectorScanner:
                 return True
 
         return False
+
+    # ---------------------------------------------------------
+
+    def __repr__(self) -> str:
+
+        return (
+            "ConnectorScanner("
+            f"root_directory='{self.root_directory}')"
+        )

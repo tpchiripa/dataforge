@@ -1,7 +1,7 @@
 """
 DataForge Pipeline Builder
 
-Fluent builder for constructing pipelines.
+Provides a fluent interface for constructing DataForge pipelines.
 """
 
 from __future__ import annotations
@@ -13,66 +13,140 @@ from pipelines.core.pipeline_step import PipelineStep
 
 class PipelineBuilder:
     """
-    Fluent builder for DataForge pipelines.
+    Fluent builder for constructing DataForge pipelines.
 
     Example
     -------
     pipeline = (
-        PipelineBuilder(config)
-        .add_step(step1)
-        .add_step(step2)
-        .build()
+        PipelineBuilder("Customer ETL")
+            .description("Loads customer records")
+            .version("1.0.0")
+            .add_step(step1)
+            .add_step(step2)
+            .build()
     )
     """
 
-    def __init__(self, config: PipelineConfig):
+    def __init__(
+        self,
+        name: str,
+    ):
 
-        self.pipeline = Pipeline(config)
+        self._config = PipelineConfig(
+            name=name,
+        )
 
+        self._steps: list[PipelineStep] = []
+
+    # ---------------------------------------------------------
+    # Configuration
+    # ---------------------------------------------------------
+
+    def description(
+        self,
+        description: str,
+    ) -> "PipelineBuilder":
+
+        self._config.description = description
+
+        return self
+
+    # ---------------------------------------------------------
+
+    def version(
+        self,
+        version: str,
+    ) -> "PipelineBuilder":
+
+        self._config.version = version
+
+        return self
+
+    # ---------------------------------------------------------
+
+    def enabled(
+        self,
+        enabled: bool = True,
+    ) -> "PipelineBuilder":
+
+        self._config.enabled = enabled
+
+        return self
+
+    # ---------------------------------------------------------
+    # Steps
     # ---------------------------------------------------------
 
     def add_step(
         self,
         step: PipelineStep,
     ) -> "PipelineBuilder":
-        """
-        Add a pipeline step.
-        """
 
-        self.pipeline.add_step(step)
+        self._steps.append(step)
 
         return self
 
     # ---------------------------------------------------------
 
-    def remove_step(
+    def clear_steps(
         self,
-        step_name: str,
     ) -> "PipelineBuilder":
-        """
-        Remove a pipeline step.
-        """
 
-        self.pipeline.remove_step(step_name)
+        self._steps.clear()
+
+        return self
+
+    # ---------------------------------------------------------
+    # Build
+    # ---------------------------------------------------------
+
+    def build(
+        self,
+    ) -> Pipeline:
+
+        pipeline = Pipeline(
+            config=self._config,
+        )
+
+        for step in self._steps:
+
+            pipeline.add_step(step)
+
+        return pipeline
+
+    # ---------------------------------------------------------
+
+    def reset(
+        self,
+    ) -> "PipelineBuilder":
+
+        name = self._config.name
+
+        self._config = PipelineConfig(
+            name=name,
+        )
+
+        self._steps.clear()
 
         return self
 
     # ---------------------------------------------------------
 
-    def clear(self) -> "PipelineBuilder":
-        """
-        Remove every step.
-        """
+    @property
+    def step_count(
+        self,
+    ) -> int:
 
-        self.pipeline.clear_steps()
-
-        return self
+        return len(self._steps)
 
     # ---------------------------------------------------------
 
-    def build(self) -> Pipeline:
-        """
-        Return the finished pipeline.
-        """
+    def __repr__(
+        self,
+    ) -> str:
 
-        return self.pipeline
+        return (
+            f"PipelineBuilder("
+            f"name='{self._config.name}', "
+            f"steps={len(self._steps)})"
+        )

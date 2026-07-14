@@ -1,95 +1,197 @@
 """
 DataForge Connector Catalog
 
-Provides access to metadata for all registered connectors.
+Builds a searchable catalog of all discovered connectors.
 """
 
 from __future__ import annotations
 
-from connectors.base import ConnectorRegistry
+from pathlib import Path
+
+from connectors.base.registry import ConnectorRegistry
+from .discovery import ConnectorDiscovery
+from .inspector import ConnectorInspector
 
 
 class ConnectorCatalog:
     """
-    Catalog of all registered connectors.
+    Catalog of discovered DataForge connectors.
     """
 
-    def __init__(self, registry: ConnectorRegistry | None = None):
+    def __init__(
+        self,
+        connectors_directory: str | Path = "connectors",
+    ) -> None:
 
-        self.registry = registry or ConnectorRegistry()
+        self.discovery = ConnectorDiscovery(
+            connectors_directory
+        )
+
+        self.inspector = ConnectorInspector()
+
+        self._catalog: dict[str, dict] = {}
 
     # ---------------------------------------------------------
-    # Public API
+    # Catalog Construction
     # ---------------------------------------------------------
 
-    def list(self) -> list[dict]:
+    def build(self) -> dict[str, dict]:
         """
-        Return metadata for every registered connector.
+        Build the connector catalog.
         """
 
-        catalog = []
+        # Ensure connectors are discovered and registered
+        self.discovery.discover()
 
-        for connector_name in self.registry.list_connectors():
+        self._catalog.clear()
 
-            connector_class = self.registry.get(connector_name)
+        for connector_name in ConnectorRegistry.list_connectors():
 
-            metadata = connector_class.get_metadata()
-
-            catalog.append(
-                {
-                    "name": connector_name,
-                    "display_name": metadata.name,
-                    "version": metadata.version,
-                    "description": metadata.description,
-                    "author": metadata.author,
-                    "connector_type": metadata.connector_type.value,
-                    "supports_batch": metadata.supports_batch,
-                    "supports_streaming": metadata.supports_streaming,
-                    "supports_incremental": metadata.supports_incremental,
-                    "tags": metadata.tags,
-                }
+            connector_class = ConnectorRegistry.get(
+                connector_name
             )
 
-        return sorted(catalog, key=lambda item: item["name"])
+            info = self.inspector.inspect(
+                connector_class
+            )
+
+            self._catalog[
+                connector_name
+            ] = info
+
+        return self._catalog
 
     # ---------------------------------------------------------
 
-    def get(self, connector_name: str) -> dict:
+    def refresh(self) -> dict[str, dict]:
         """
-        Return metadata for a single connector.
+        Refresh the connector catalog.
         """
 
-        connector_class = self.registry.get(connector_name)
+        return self.build()
 
-        metadata = connector_class.get_metadata()
+    # ---------------------------------------------------------
+    # Lookup
+    # ---------------------------------------------------------
 
-        return {
-            "name": connector_name,
-            "display_name": metadata.name,
-            "version": metadata.version,
-            "description": metadata.description,
-            "author": metadata.author,
-            "connector_type": metadata.connector_type.value,
-            "supports_batch": metadata.supports_batch,
-            "supports_streaming": metadata.supports_streaming,
-            "supports_incremental": metadata.supports_incremental,
-            "tags": metadata.tags,
-        }
+    def get(
+        self,
+        connector_name: str,
+    ) -> dict | None:
+
+        if not self._catalog:
+            self.build()
+
+        return self._catalog.get(
+            connector_name.lower()
+        )
 
     # ---------------------------------------------------------
 
-    def exists(self, connector_name: str) -> bool:
-        """
-        Check whether a connector exists.
-        """
+    def exists(
+        self,
+        connector_name: str,
+    ) -> bool:
 
-        return self.registry.exists(connector_name)
+        if not self._catalog:
+            self.build()
+
+        return (
+            connector_name.lower()
+            in self._catalog
+        )
+
+    # ---------------------------------------------------------
+
+    def list(self) -> list[str]:
+
+        if not self._catalog:
+            self.build()
+
+        return sorted(
+            self._catalog.keys()
+        )
+
+    # ---------------------------------------------------------
+
+    def search(
+        self,
+        keyword: str,
+    ) -> list[dict]:
+
+        if not self._catalog:
+            self.build()
+
+        keyword = keyword.lower()
+
+        results = []
+
+        for connector in self._catalog.values():
+
+            if (
+                keyword
+                in connector["name"].lower()
+                or keyword
+                in connector["description"].lower()
+            ):
+                results.append(
+                    connector
+                )
+
+        return results
 
     # ---------------------------------------------------------
 
     def count(self) -> int:
-        """
-        Return the number of registered connectors.
-        """
 
-        return len(self.registry.list_connectors())
+        if not self._catalog:
+            self.build()
+
+        return len(
+            self._catalog
+        )
+
+    # ---------------------------------------------------------
+    # Dunder Methods
+    # ---------------------------------------------------------
+
+    def __len__(
+        self,
+    ) -> int:
+
+        return self.count()
+
+    # ---------------------------------------------------------
+
+    def __contains__(
+        self,
+        connector_name: str,
+    ) -> bool:
+
+        return self.exists(
+            connector_name
+        )
+
+    # ---------------------------------------------------------
+
+    def __iter__(
+        self,
+    ):
+
+        if not self._catalog:
+            self.build()
+
+        return iter(
+            self._catalog.values()
+        )
+
+    # ---------------------------------------------------------
+
+    def __repr__(
+        self,
+    ) -> str:
+
+        return (
+            "ConnectorCatalog("
+            f"connectors={self.count()})"
+        )

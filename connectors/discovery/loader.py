@@ -1,22 +1,26 @@
 """
 DataForge Connector Loader
 
-Dynamically imports connector modules discovered by the ConnectorScanner.
+Dynamically imports connector implementations discovered by the
+ConnectorScanner.
 
 Responsibilities
 ----------------
-- Import connector modules from a file path
-- Discover connector classes
-- Return the connector class
+- Import connector modules
+- Locate connector classes
+- Return connector classes
 
 The loader performs NO scanning.
 
-Scanning is handled by the ConnectorScanner.
+Scanning is handled by ConnectorScanner.
+
+Registration is handled by ConnectorDiscovery.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import inspect
 from pathlib import Path
 
 from connectors.base import BaseConnector
@@ -27,36 +31,36 @@ class ConnectorLoader:
     Dynamically loads DataForge connector classes.
     """
 
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
     # Public API
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
 
-    def load(self, connector_path: str | Path) -> type[BaseConnector]:
+    def load(
+        self,
+        connector_path: str | Path,
+    ) -> type[BaseConnector]:
         """
-        Load a connector class from a connector.py file.
+        Load a connector class from a Python module.
 
         Parameters
         ----------
-        connector_path : str | Path
-            Path to connector.py
+        connector_path
+            Path to a connector implementation.
 
         Returns
         -------
         type[BaseConnector]
-            Connector class
-
-        Raises
-        ------
-        ImportError
-            If the module cannot be imported.
-
-        ValueError
-            If no connector class is found.
         """
 
-        connector_path = Path(connector_path).resolve()
+        connector_path = Path(
+            connector_path
+        ).resolve()
 
-        module_name = "_".join(connector_path.parts[-3:]).replace(".py", "")
+        module_name = (
+            connector_path.stem
+            + "_"
+            + str(abs(hash(connector_path)))
+        )
 
         spec = importlib.util.spec_from_file_location(
             module_name,
@@ -64,37 +68,90 @@ class ConnectorLoader:
         )
 
         if spec is None or spec.loader is None:
-            raise ImportError(f"Unable to load module from {connector_path}")
+
+            raise ImportError(
+                f"Unable to load module: {connector_path}"
+            )
 
         module = importlib.util.module_from_spec(spec)
 
         spec.loader.exec_module(module)
 
-        connector_class = self._find_connector(module)
+        connector = self._find_connector(module)
 
-        if connector_class is None:
+        if connector is None:
+
             raise ValueError(
-                f"No BaseConnector implementation found in {connector_path}"
+                f"No BaseConnector implementation found in "
+                f"{connector_path.name}"
             )
 
-        return connector_class
+        return connector
 
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
     # Helpers
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
 
-    def _find_connector(self, module) -> type[BaseConnector] | None:
+    def _find_connector(
+        self,
+        module,
+    ) -> type[BaseConnector] | None:
         """
-        Locate the connector class within an imported module.
+        Locate the connector class inside a module.
         """
 
-        for obj in module.__dict__.values():
+        candidates: list[type[BaseConnector]] = []
+
+        for _, obj in inspect.getmembers(
+            module,
+            inspect.isclass,
+        ):
 
             if (
-                isinstance(obj, type)
-                and issubclass(obj, BaseConnector)
+                issubclass(obj, BaseConnector)
                 and obj is not BaseConnector
+                and obj.__module__ == module.__name__
             ):
-                return obj
 
-        return None
+                candidates.append(obj)
+
+        if not candidates:
+
+            return None
+
+        if len(candidates) > 1:
+
+            raise ValueError(
+                f"Multiple connector classes found in "
+                f"module '{module.__name__}'."
+            )
+
+        return candidates[0]
+
+    # ---------------------------------------------------------
+
+    def can_load(
+        self,
+        connector_path: str | Path,
+    ) -> bool:
+        """
+        Determine whether a connector can be loaded.
+        """
+
+        try:
+
+            self.load(connector_path)
+
+            return True
+
+        except Exception:
+
+            return False
+
+    # ---------------------------------------------------------
+
+    def __repr__(
+        self,
+    ) -> str:
+
+        return "ConnectorLoader()"

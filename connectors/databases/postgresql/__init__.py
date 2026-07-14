@@ -1,3 +1,7 @@
+"""
+DataForge PostgreSQL Connector
+"""
+
 from .connector import PostgreSQLConnector
 
 __all__ = [

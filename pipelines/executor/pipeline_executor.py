@@ -1,7 +1,7 @@
 """
 DataForge Pipeline Executor
 
-Responsible for executing pipelines.
+Responsible for executing DataForge pipelines.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from pipelines.core.pipeline import Pipeline
+from pipelines.core.pipeline_context import PipelineContext
 from pipelines.core.pipeline_result import PipelineResult
 from pipelines.core.pipeline_status import PipelineStatus
 
@@ -16,20 +17,14 @@ from pipelines.core.pipeline_status import PipelineStatus
 class PipelineExecutor:
     """
     Executes DataForge pipelines.
-
-    The executor is responsible for orchestrating pipeline execution.
-    Future versions will support retries, scheduling, logging,
-    distributed execution and monitoring.
     """
 
     def __init__(self):
 
-        self.execution_count = 0
-
-        self.last_execution = None
+        pass
 
     # ---------------------------------------------------------
-    # Execution
+    # Public API
     # ---------------------------------------------------------
 
     def execute(
@@ -40,82 +35,109 @@ class PipelineExecutor:
         Execute a pipeline.
         """
 
-        self.execution_count += 1
+        self._validate_pipeline(pipeline)
 
-        self.last_execution = datetime.utcnow()
+        context = self._create_context(
+            pipeline,
+        )
 
-        return pipeline.execute()
+        start = datetime.utcnow()
 
-    # ---------------------------------------------------------
-    # Utilities
-    # ---------------------------------------------------------
+        context.started_at = start
 
-    def execute_many(
-        self,
-        pipelines: list[Pipeline],
-    ) -> list[PipelineResult]:
-        """
-        Execute multiple pipelines sequentially.
-        """
+        context.set_status(
+            PipelineStatus.RUNNING,
+        )
 
-        results = []
+        try:
 
-        for pipeline in pipelines:
+            for step in pipeline.steps:
 
-            results.append(
-                self.execute(pipeline)
+                step.run(context)
+
+            context.finished_at = datetime.utcnow()
+
+            context.set_status(
+                PipelineStatus.COMPLETED,
             )
 
-        return results
+            duration = (
+                context.finished_at - start
+            ).total_seconds()
+
+            return PipelineResult(
+                success=True,
+                status=context.status,
+                pipeline_name=pipeline.config.name,
+                message="Pipeline completed successfully.",
+                started_at=start,
+                finished_at=context.finished_at,
+                duration_seconds=duration,
+                metadata=context.metadata,
+                warnings=context.warnings,
+            )
+
+        except Exception:
+
+            context.finished_at = datetime.utcnow()
+
+            context.set_status(
+                PipelineStatus.FAILED,
+            )
+
+            # NOTE:
+            # The failing PipelineStep has already recorded the
+            # exception via PipelineStep.on_error().
+            #
+            # We therefore DO NOT add the same error again here,
+            # otherwise the PipelineResult would contain duplicate
+            # error messages.
+
+            duration = (
+                context.finished_at - start
+            ).total_seconds()
+
+            return PipelineResult(
+                success=False,
+                status=context.status,
+                pipeline_name=pipeline.config.name,
+                message="Pipeline execution failed.",
+                started_at=start,
+                finished_at=context.finished_at,
+                duration_seconds=duration,
+                metadata=context.metadata,
+                errors=context.errors,
+                warnings=context.warnings,
+            )
 
     # ---------------------------------------------------------
 
-    def execution_summary(
+    def _validate_pipeline(
         self,
-        result: PipelineResult,
-    ) -> dict:
+        pipeline: Pipeline,
+    ) -> None:
         """
-        Return a summary of a pipeline execution.
+        Validate a pipeline before execution.
         """
 
-        return {
-            "pipeline": result.pipeline_name,
-            "status": result.status.value,
-            "success": result.success,
-            "duration_seconds": result.duration_seconds,
-            "records_read": result.records_read,
-            "records_written": result.records_written,
-            "records_failed": result.records_failed,
-            "errors": len(result.errors),
-            "warnings": len(result.warnings),
-        }
+        pipeline.validate()
 
     # ---------------------------------------------------------
 
-    def reset(self) -> None:
+    def _create_context(
+        self,
+        pipeline: Pipeline,
+    ) -> PipelineContext:
         """
-        Reset executor statistics.
-        """
-
-        self.execution_count = 0
-
-        self.last_execution = None
-
-    # ---------------------------------------------------------
-
-    @property
-    def has_executed(self) -> bool:
-        """
-        Returns True if at least one execution has occurred.
+        Create a fresh execution context.
         """
 
-        return self.execution_count > 0
+        return PipelineContext(
+            config=pipeline.config,
+        )
 
     # ---------------------------------------------------------
 
     def __repr__(self) -> str:
 
-        return (
-            f"PipelineExecutor("
-            f"executions={self.execution_count})"
-        )
+        return "PipelineExecutor()"

@@ -6,16 +6,10 @@ Core pipeline implementation.
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from .exceptions import (
-    PipelineExecutionError,
     PipelineValidationError,
 )
 from .pipeline_config import PipelineConfig
-from .pipeline_context import PipelineContext
-from .pipeline_result import PipelineResult
-from .pipeline_status import PipelineStatus
 from .pipeline_step import PipelineStep
 
 
@@ -61,7 +55,9 @@ class Pipeline:
             if step.name != step_name
         ]
 
-    def clear_steps(self) -> None:
+    def clear_steps(
+        self,
+    ) -> None:
         """
         Remove every pipeline step.
         """
@@ -72,17 +68,21 @@ class Pipeline:
     # Validation
     # ---------------------------------------------------------
 
-    def validate(self) -> None:
+    def validate(
+        self,
+    ) -> None:
         """
         Validate pipeline before execution.
         """
 
         if not self.config.enabled:
+
             raise PipelineValidationError(
                 "Pipeline is disabled."
             )
 
         if not self.steps:
+
             raise PipelineValidationError(
                 "Pipeline contains no steps."
             )
@@ -91,99 +91,52 @@ class Pipeline:
     # Execution
     # ---------------------------------------------------------
 
-    def execute(self) -> PipelineResult:
+    def execute(self):
         """
         Execute the pipeline.
+
+        Delegates execution to PipelineExecutor.
         """
 
-        self.validate()
-
-        context = PipelineContext(
-            config=self.config,
+        from pipelines.executor.pipeline_executor import (
+            PipelineExecutor,
         )
 
-        start = datetime.utcnow()
+        executor = PipelineExecutor()
 
-        context.started_at = start
-
-        context.set_status(
-            PipelineStatus.RUNNING
+        return executor.execute(
+            self,
         )
-
-        try:
-
-            for step in self.steps:
-
-                step.run(context)
-
-            context.finished_at = datetime.utcnow()
-
-            context.set_status(
-                PipelineStatus.COMPLETED
-            )
-
-            duration = (
-                context.finished_at - start
-            ).total_seconds()
-
-            return PipelineResult(
-                success=True,
-                status=context.status,
-                pipeline_name=self.config.name,
-                message="Pipeline completed successfully.",
-                started_at=start,
-                finished_at=context.finished_at,
-                duration_seconds=duration,
-                metadata=context.metadata,
-                warnings=context.warnings,
-            )
-
-        except Exception as exc:
-
-            context.finished_at = datetime.utcnow()
-
-            context.set_status(
-                PipelineStatus.FAILED
-            )
-
-            duration = (
-                context.finished_at - start
-            ).total_seconds()
-
-            context.add_error(str(exc))
-
-            return PipelineResult(
-                success=False,
-                status=context.status,
-                pipeline_name=self.config.name,
-                message="Pipeline execution failed.",
-                started_at=start,
-                finished_at=context.finished_at,
-                duration_seconds=duration,
-                metadata=context.metadata,
-                errors=context.errors,
-                warnings=context.warnings,
-            )
 
     # ---------------------------------------------------------
 
     @property
-    def step_count(self) -> int:
+    def step_count(
+        self,
+    ) -> int:
         """
         Return the number of pipeline steps.
         """
 
-        return len(self.steps)
+        return len(
+            self.steps,
+        )
 
     # ---------------------------------------------------------
 
-    def __len__(self) -> int:
+    def __len__(
+        self,
+    ) -> int:
 
-        return len(self.steps)
+        return len(
+            self.steps,
+        )
 
     # ---------------------------------------------------------
 
-    def __repr__(self) -> str:
+    def __repr__(
+        self,
+    ) -> str:
 
         return (
             f"Pipeline("

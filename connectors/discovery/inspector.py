@@ -1,108 +1,230 @@
 """
 DataForge Connector Inspector
 
-Inspects registered connectors and exposes their
-metadata and capabilities.
+Inspects connector implementations and exposes metadata.
 """
 
 from __future__ import annotations
 
-from inspect import getmembers, isfunction
-
-from connectors.base import ConnectorRegistry
+from connectors.base import BaseConnector
+from connectors.base.registry import ConnectorRegistry
 
 
 class ConnectorInspector:
     """
-    Inspects registered DataForge connectors.
+    Inspects DataForge connector implementations.
     """
-
-    def __init__(self, registry: ConnectorRegistry | None = None):
-
-        self.registry = registry or ConnectorRegistry()
 
     # ---------------------------------------------------------
     # Public API
     # ---------------------------------------------------------
 
-    def inspect(self, connector_name: str) -> dict:
+    def inspect(
+        self,
+        connector: str | type[BaseConnector],
+    ) -> dict:
         """
-        Inspect a registered connector.
-
-        Parameters
-        ----------
-        connector_name
-            Registered connector name.
-
-        Returns
-        -------
-        dict
-            Connector information.
+        Inspect a connector class or connector name.
         """
 
-        connector_class = self.registry.get(connector_name)
+        if isinstance(connector, str):
 
-        metadata = connector_class.get_metadata()
+            connector_class = ConnectorRegistry.get(
+                connector
+            )
 
-        methods = self._public_methods(connector_class)
+        else:
+
+            connector_class = connector
+
+        #
+        # Connector metadata
+        #
+
+        metadata = {}
+
+        if hasattr(
+            connector_class,
+            "get_metadata",
+        ):
+
+            try:
+
+                metadata = (
+                    connector_class.get_metadata()
+                )
+
+            except Exception:
+
+                metadata = {}
+
+        #
+        # Connector name
+        #
+
+        connector_name = metadata.get(
+            "name",
+            connector_class.__name__
+            .replace("Connector", "")
+            .lower(),
+        )
+
+        #
+        # Public methods
+        #
+
+        methods = sorted(
+
+            name
+
+            for name, member in connector_class.__dict__.items()
+
+            if callable(member)
+            and not name.startswith("_")
+
+        )
+
+        #
+        # Capabilities
+        #
+
+        capabilities = metadata.get(
+            "capabilities",
+            [],
+        )
+
+        if not capabilities:
+
+            for capability in (
+                "connect",
+                "disconnect",
+                "test_connection",
+                "extract",
+                "read",
+                "write",
+            ):
+
+                if hasattr(
+                    connector_class,
+                    capability,
+                ):
+
+                    capabilities.append(
+                        capability
+                    )
 
         return {
+
             "name": connector_name,
-            "display_name": metadata.name,
-            "version": metadata.version,
-            "description": metadata.description,
-            "author": metadata.author,
-            "connector_type": metadata.connector_type.value,
-            "supports": {
-                "batch": metadata.supports_batch,
-                "streaming": metadata.supports_streaming,
-                "incremental": metadata.supports_incremental,
-            },
-            "tags": metadata.tags,
+
+            "display_name": metadata.get(
+                "display_name",
+                connector_name.capitalize(),
+            ),
+
+            "version": metadata.get(
+                "version",
+                "Unknown",
+            ),
+
+            "module": connector_class.__module__,
+
+            "class": connector_class.__name__,
+
+            "description": metadata.get(
+                "description",
+                connector_class.__doc__.strip()
+                if connector_class.__doc__
+                else "",
+            ),
+
             "methods": methods,
+
+            "capabilities": capabilities,
+
+            "supports": metadata.get(
+                "supports",
+                {},
+            ),
+
+            "metadata": metadata,
+
         }
 
     # ---------------------------------------------------------
 
-    def inspect_all(self) -> list[dict]:
+    def inspect_all(
+        self,
+    ) -> list[dict]:
         """
         Inspect every registered connector.
         """
 
-        results = []
+        return [
 
-        for connector_name in self.registry.list_connectors():
+            self.inspect(name)
 
-            results.append(
-                self.inspect(connector_name)
-            )
+            for name in ConnectorRegistry.list_connectors()
 
-        return results
+        ]
 
     # ---------------------------------------------------------
 
-    @staticmethod
-    def _public_methods(connector_class) -> list[str]:
-        """
-        Return all public methods implemented
-        by the connector.
-        """
+    def validate(
+        self,
+        connector_class: type,
+    ) -> bool:
 
-        excluded = {
-            "__init__",
-            "__repr__",
-            "__str__",
-        }
+        return (
 
-        methods = []
+            isinstance(
+                connector_class,
+                type,
+            )
 
-        for name, member in getmembers(connector_class):
+            and issubclass(
+                connector_class,
+                BaseConnector,
+            )
 
-            if (
-                isfunction(member)
-                and not name.startswith("_")
-                and name not in excluded
-            ):
-                methods.append(name)
+            and connector_class is not BaseConnector
 
-        return sorted(methods)
+        )
+
+    # ---------------------------------------------------------
+
+    def supports_metadata(
+        self,
+        connector_class: type[BaseConnector],
+    ) -> bool:
+
+        return hasattr(
+            connector_class,
+            "get_metadata",
+        )
+
+    # ---------------------------------------------------------
+
+    def connector_name(
+        self,
+        connector_class: type[BaseConnector],
+    ) -> str:
+
+        return connector_class.__name__
+
+    # ---------------------------------------------------------
+
+    def module_name(
+        self,
+        connector_class: type[BaseConnector],
+    ) -> str:
+
+        return connector_class.__module__
+
+    # ---------------------------------------------------------
+
+    def __repr__(
+        self,
+    ) -> str:
+
+        return "ConnectorInspector()"

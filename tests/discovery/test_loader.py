@@ -36,5 +36,7 @@ def test_loader_returns_baseconnector_subclass():
         "connectors/databases/postgresql/connector.py"
     )
 
-    assert issubclass(connector_class, BaseConnector)
-
+    assert issubclass(
+        connector_class,
+        BaseConnector,
+    )

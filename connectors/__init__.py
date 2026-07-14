@@ -3,21 +3,33 @@ DataForge Connector SDK
 """
 
 from .base import (
+    AuthenticationType,
     BaseConnector,
-    ConnectorConfig,
-    ConnectorMetadata,
     ConnectionResult,
-    ConnectorType,
-    ConnectorRegistry,
+    ConnectionStatus,
+    ConnectorConfig,
     ConnectorFactory,
+    ConnectorManager,
+    ConnectorMetadata,
+    ConnectorRegistry,
+    ConnectorType,
+    DatasetInfo,
+    ExtractionResult,
+    PipelineMode,
 )
 
 __all__ = [
+    "AuthenticationType",
     "BaseConnector",
-    "ConnectorConfig",
-    "ConnectorMetadata",
     "ConnectionResult",
-    "ConnectorType",
-    "ConnectorRegistry",
+    "ConnectionStatus",
+    "ConnectorConfig",
     "ConnectorFactory",
+    "ConnectorManager",
+    "ConnectorMetadata",
+    "ConnectorRegistry",
+    "ConnectorType",
+    "DatasetInfo",
+    "ExtractionResult",
+    "PipelineMode",
 ]

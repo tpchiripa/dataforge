@@ -13,13 +13,13 @@ class PipelineMonitor:
     """
     Monitors DataForge pipeline executions.
 
-    Future versions will integrate with:
+    Future integrations include:
 
     - Prometheus
     - Grafana
     - OpenTelemetry
-    - Logging
-    - Alerts
+    - Structured Logging
+    - Alerting
     """
 
     def __init__(self):
@@ -41,16 +41,18 @@ class PipelineMonitor:
         self._history.append(result)
 
     # ---------------------------------------------------------
-    # Queries
+    # History
     # ---------------------------------------------------------
 
+    @property
     def history(self) -> list[PipelineResult]:
         """
-        Return all recorded executions.
+        Return execution history.
         """
 
         return list(self._history)
 
+    @property
     def last_execution(self) -> PipelineResult | None:
         """
         Return the most recent execution.
@@ -61,6 +63,7 @@ class PipelineMonitor:
 
         return self._history[-1]
 
+    @property
     def successful_runs(self) -> list[PipelineResult]:
         """
         Return successful executions.
@@ -72,6 +75,7 @@ class PipelineMonitor:
             if result.success
         ]
 
+    @property
     def failed_runs(self) -> list[PipelineResult]:
         """
         Return failed executions.
@@ -87,46 +91,51 @@ class PipelineMonitor:
     # Statistics
     # ---------------------------------------------------------
 
+    @property
     def execution_count(self) -> int:
         """
-        Total number of executions.
+        Total executions.
         """
 
         return len(self._history)
 
+    @property
     def success_count(self) -> int:
         """
-        Number of successful executions.
+        Successful executions.
         """
 
-        return len(self.successful_runs())
+        return len(self.successful_runs)
 
+    @property
     def failure_count(self) -> int:
         """
-        Number of failed executions.
+        Failed executions.
         """
 
-        return len(self.failed_runs())
+        return len(self.failed_runs)
 
+    @property
     def success_rate(self) -> float:
         """
-        Percentage of successful executions.
+        Success percentage.
         """
 
-        if not self._history:
+        if self.execution_count == 0:
             return 0.0
 
         return (
-            self.success_count()
-            / self.execution_count()
+            self.success_count
+            / self.execution_count
         ) * 100.0
 
+    @property
     def average_duration(self) -> float:
         """
-        Average pipeline execution duration.
+        Average execution duration.
         """
 
-        if not self._history:
+        if self.execution_count == 0:
             return 0.0
 
         total = sum(
@@ -134,7 +143,7 @@ class PipelineMonitor:
             for result in self._history
         )
 
-        return total / len(self._history)
+        return total / self.execution_count
 
     # ---------------------------------------------------------
     # Utilities
@@ -142,31 +151,32 @@ class PipelineMonitor:
 
     def clear(self) -> None:
         """
-        Clear execution history.
+        Remove all execution history.
         """
 
         self._history.clear()
 
     # ---------------------------------------------------------
 
+    @property
     def summary(self) -> dict:
         """
-        Return execution statistics.
+        Return execution summary.
         """
 
         return {
-            "executions": self.execution_count(),
-            "successful": self.success_count(),
-            "failed": self.failure_count(),
-            "success_rate": self.success_rate(),
-            "average_duration": self.average_duration(),
+            "executions": self.execution_count,
+            "successful": self.success_count,
+            "failed": self.failure_count,
+            "success_rate": self.success_rate,
+            "average_duration": self.average_duration,
         }
 
     # ---------------------------------------------------------
 
     def __len__(self) -> int:
 
-        return len(self._history)
+        return self.execution_count
 
     # ---------------------------------------------------------
 
@@ -174,5 +184,5 @@ class PipelineMonitor:
 
         return (
             f"PipelineMonitor("
-            f"executions={self.execution_count()})"
+            f"executions={self.execution_count})"
         )
