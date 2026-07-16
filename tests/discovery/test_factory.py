@@ -2,12 +2,8 @@
 DataForge Factory Tests
 """
 
-from connectors.base import (
-    ConnectorConfig,
-    ConnectorFactory,
-    ConnectorRegistry,
-    ConnectorType,
-)
+from connectors.base import (ConnectorConfig, ConnectorFactory,
+                             ConnectorRegistry, ConnectorType)
 from connectors.discovery.discovery import ConnectorDiscovery
 
 

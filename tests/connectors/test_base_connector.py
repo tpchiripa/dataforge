@@ -4,11 +4,9 @@ DataForge Base Connector Tests
 
 from __future__ import annotations
 
-import pytest
 
 from connectors.base.base_connector import BaseConnector
 from connectors.config.connector_config import ConnectorConfig
-
 
 # ---------------------------------------------------------
 # Dummy Connector

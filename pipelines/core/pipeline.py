@@ -6,9 +6,7 @@ Core pipeline implementation.
 
 from __future__ import annotations
 
-from .exceptions import (
-    PipelineValidationError,
-)
+from .exceptions import PipelineValidationError
 from .pipeline_config import PipelineConfig
 from .pipeline_step import PipelineStep
 
@@ -98,9 +96,7 @@ class Pipeline:
         Delegates execution to PipelineExecutor.
         """
 
-        from pipelines.executor.pipeline_executor import (
-            PipelineExecutor,
-        )
+        from pipelines.executor.pipeline_executor import PipelineExecutor
 
         executor = PipelineExecutor()
 

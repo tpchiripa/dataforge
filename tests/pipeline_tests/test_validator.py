@@ -12,7 +12,6 @@ from pipelines.core.pipeline_context import PipelineContext
 from pipelines.steps.base.base_step import BaseStep
 from pipelines.validation.pipeline_validator import PipelineValidator
 
-
 # ---------------------------------------------------------
 # Test Step
 # ---------------------------------------------------------

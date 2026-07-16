@@ -18,10 +18,7 @@ from __future__ import annotations
 from typing import Type
 
 from .base_connector import BaseConnector
-from .exceptions import (
-    ConnectorNotFoundError,
-    ConnectorRegistrationError,
-)
+from .exceptions import ConnectorNotFoundError, ConnectorRegistrationError
 
 
 class ConnectorRegistry:

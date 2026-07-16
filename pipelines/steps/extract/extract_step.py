@@ -7,7 +7,6 @@ Pipeline step responsible for extracting data from a connector.
 from __future__ import annotations
 
 from connectors.base import BaseConnector
-
 from pipelines.core.pipeline_context import PipelineContext
 from pipelines.steps.base.base_step import BaseStep
 

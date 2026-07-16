@@ -8,7 +8,6 @@ import pytest
 
 from connectors.config.connector_config import ConnectorConfig
 
-
 # ---------------------------------------------------------
 # Tests
 # ---------------------------------------------------------

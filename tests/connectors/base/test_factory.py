@@ -12,7 +12,6 @@ from connectors.base.factory import ConnectorFactory
 from connectors.base.registry import ConnectorRegistry
 from connectors.config.connector_config import ConnectorConfig
 
-
 # ---------------------------------------------------------
 # Dummy Connector
 # ---------------------------------------------------------

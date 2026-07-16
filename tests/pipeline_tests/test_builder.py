@@ -7,7 +7,6 @@ from __future__ import annotations
 from pipelines.builder.pipeline_builder import PipelineBuilder
 from pipelines.core.pipeline import Pipeline
 from pipelines.core.pipeline_context import PipelineContext
-from pipelines.core.pipeline_config import PipelineConfig
 from pipelines.steps.base.base_step import BaseStep
 
 

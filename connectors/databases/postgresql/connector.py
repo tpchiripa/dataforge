@@ -12,10 +12,7 @@ import psycopg2
 from psycopg2.extensions import connection
 
 from connectors.base.base_connector import BaseConnector
-from connectors.base.types import (
-    ConnectionResult,
-    ConnectionStatus,
-)
+from connectors.base.types import ConnectionResult, ConnectionStatus
 from connectors.config.connector_config import ConnectorConfig
 
 

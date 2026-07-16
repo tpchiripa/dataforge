@@ -11,7 +11,6 @@ from pipelines.core.pipeline_status import PipelineStatus
 from pipelines.executor.pipeline_executor import PipelineExecutor
 from pipelines.steps.base.base_step import BaseStep
 
-
 # ---------------------------------------------------------
 # Dummy Steps
 # ---------------------------------------------------------

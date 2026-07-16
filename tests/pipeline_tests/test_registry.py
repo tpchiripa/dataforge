@@ -7,12 +7,9 @@ from __future__ import annotations
 import pytest
 
 from pipelines.builder.pipeline_builder import PipelineBuilder
-from pipelines.core.exceptions import (
-    DuplicatePipelineError,
-    PipelineNotFoundError,
-)
+from pipelines.core.exceptions import (DuplicatePipelineError,
+                                       PipelineNotFoundError)
 from pipelines.registry.pipeline_registry import PipelineRegistry
-
 
 # ---------------------------------------------------------
 # Test Fixture

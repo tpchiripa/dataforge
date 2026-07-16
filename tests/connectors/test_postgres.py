@@ -4,14 +4,10 @@ DataForge PostgreSQL Connector Tests
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from connectors.config.connector_config import ConnectorConfig
-from connectors.databases.postgresql.connector import (
-    PostgreSQLConnector,
-)
-
+from connectors.databases.postgresql.connector import PostgreSQLConnector
 
 # ---------------------------------------------------------
 # Helpers

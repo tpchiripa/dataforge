@@ -10,8 +10,7 @@ S3, Azure, Salesforce, etc.) inherit from this class.
 
 from __future__ import annotations
 
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Any
 
 from connectors.config.connector_config import ConnectorConfig

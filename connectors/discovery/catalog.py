@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from connectors.base.registry import ConnectorRegistry
+
 from .discovery import ConnectorDiscovery
 from .inspector import ConnectorInspector
 

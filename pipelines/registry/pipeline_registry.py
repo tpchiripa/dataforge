@@ -6,10 +6,8 @@ Central registry for DataForge pipelines.
 
 from __future__ import annotations
 
-from pipelines.core.exceptions import (
-    DuplicatePipelineError,
-    PipelineNotFoundError,
-)
+from pipelines.core.exceptions import (DuplicatePipelineError,
+                                       PipelineNotFoundError)
 from pipelines.core.pipeline import Pipeline
 
 

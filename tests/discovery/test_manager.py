@@ -2,11 +2,7 @@
 DataForge Manager Tests
 """
 
-from connectors.base import (
-    ConnectorConfig,
-    ConnectorRegistry,
-    ConnectorType,
-)
+from connectors.base import ConnectorConfig, ConnectorRegistry, ConnectorType
 from connectors.discovery.manager import ConnectorManager
 
 

@@ -7,13 +7,10 @@ from __future__ import annotations
 import pytest
 
 from connectors.base.base_connector import BaseConnector
-from connectors.base.exceptions import (
-    ConnectorNotFoundError,
-    ConnectorRegistrationError,
-)
+from connectors.base.exceptions import (ConnectorNotFoundError,
+                                        ConnectorRegistrationError)
 from connectors.base.registry import ConnectorRegistry
 from connectors.config.connector_config import ConnectorConfig
-
 
 # ---------------------------------------------------------
 # Dummy Connector

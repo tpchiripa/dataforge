@@ -11,7 +11,6 @@ from connectors.base.manager import ConnectorManager
 from connectors.base.registry import ConnectorRegistry
 from connectors.config.connector_config import ConnectorConfig
 
-
 # ---------------------------------------------------------
 # Dummy Connector
 # ---------------------------------------------------------

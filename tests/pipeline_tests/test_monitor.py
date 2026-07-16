@@ -6,10 +6,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pipelines.monitoring.pipeline_monitor import PipelineMonitor
 from pipelines.core.pipeline_result import PipelineResult
 from pipelines.core.pipeline_status import PipelineStatus
-
+from pipelines.monitoring.pipeline_monitor import PipelineMonitor
 
 # ---------------------------------------------------------
 # Helpers

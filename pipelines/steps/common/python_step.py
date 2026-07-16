@@ -6,7 +6,7 @@ Execute arbitrary Python functions within a pipeline.
 
 from __future__ import annotations
 
-from typing import Callable, Any
+from typing import Any, Callable
 
 from pipelines.core.pipeline_context import PipelineContext
 from pipelines.steps.base.base_step import BaseStep

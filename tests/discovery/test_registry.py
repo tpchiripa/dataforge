@@ -4,11 +4,8 @@ DataForge Registry Tests
 
 import pytest
 
-from connectors.base import (
-    ConnectorRegistry,
-    ConnectorRegistrationError,
-    ConnectorNotFoundError,
-)
+from connectors.base import (ConnectorNotFoundError,
+                             ConnectorRegistrationError, ConnectorRegistry)
 from connectors.discovery.discovery import ConnectorDiscovery
 
 

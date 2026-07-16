@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pandas as pd
 
 from pipelines.core.pipeline_context import PipelineContext
 from pipelines.steps.base.base_step import BaseStep
