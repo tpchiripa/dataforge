@@ -2,8 +2,12 @@
 DataForge Factory Tests
 """
 
-from connectors.base import (ConnectorConfig, ConnectorFactory,
-                             ConnectorRegistry, ConnectorType)
+from connectors.base import (
+    ConnectorConfig,
+    ConnectorFactory,
+    ConnectorRegistry,
+    ConnectorType,
+)
 from connectors.discovery.discovery import ConnectorDiscovery
 
 
@@ -20,7 +24,7 @@ def build_config():
         name="Metadata Database",
         connector_type=ConnectorType.DATABASE,
         host="localhost",
-        port=5433,
+        port=5432,
         database="dataforge",
         username="dataforge",
         password="DataForge2026!",
