@@ -24,7 +24,7 @@ def build_config():
         name="Metadata Database",
         connector_type=ConnectorType.DATABASE,
         host="localhost",
-        port=5432,
+        port=5433,
         database="dataforge",
         username="dataforge",
         password="DataForge2026!",
