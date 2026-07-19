@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from pipelines.execution.execution_id import ExecutionID
+
 from .pipeline_config import PipelineConfig
 from .pipeline_status import PipelineStatus
 
@@ -26,6 +28,10 @@ class PipelineContext:
     # ---------------------------------------------------------
 
     config: PipelineConfig
+
+    execution_id: str = field(
+        default_factory=ExecutionID.generate,
+    )
 
     status: PipelineStatus = PipelineStatus.CREATED
 

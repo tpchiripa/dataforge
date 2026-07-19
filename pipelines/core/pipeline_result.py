@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from pipelines.execution.execution_metrics import ExecutionMetrics
+
 from .pipeline_status import PipelineStatus
 
 
@@ -23,6 +25,8 @@ class PipelineResult:
 
     pipeline_name: str
 
+    execution_id: str = ""
+
     message: str = ""
 
     started_at: datetime | None = None
@@ -30,6 +34,10 @@ class PipelineResult:
     finished_at: datetime | None = None
 
     duration_seconds: float = 0.0
+
+    metrics: ExecutionMetrics = field(
+        default_factory=ExecutionMetrics,
+    )
 
     records_read: int = 0
 

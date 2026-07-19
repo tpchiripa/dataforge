@@ -13,6 +13,13 @@ from pipelines.core.pipeline_context import PipelineContext
 from pipelines.core.pipeline_result import PipelineResult
 from pipelines.core.pipeline_status import PipelineStatus
 
+from pipelines.execution import (
+    ExecutionEvents,
+    ExecutionLogger,
+    ExecutionMetrics,
+    ExecutionTimer,
+)
+
 
 class PipelineExecutor:
     """
@@ -21,7 +28,9 @@ class PipelineExecutor:
 
     def __init__(self):
 
-        pass
+        self.logger = ExecutionLogger()
+
+        self.events = ExecutionEvents()
 
     # ---------------------------------------------------------
     # Public API
@@ -41,6 +50,16 @@ class PipelineExecutor:
             pipeline,
         )
 
+        timer = ExecutionTimer()
+
+        timer.start()
+
+        metrics = ExecutionMetrics()
+
+        metrics.steps_total = len(
+            pipeline.steps,
+        )
+
         start = datetime.utcnow()
 
         context.started_at = start
@@ -49,11 +68,36 @@ class PipelineExecutor:
             PipelineStatus.RUNNING,
         )
 
+        self.logger.info(
+            f"Starting pipeline "
+            f"'{pipeline.config.name}' "
+            f"({context.execution_id})"
+        )
+
+        self.events.pipeline_started(
+            pipeline.config.name,
+        )
+
         try:
 
             for step in pipeline.steps:
 
+                self.logger.info(
+                    f"Executing step: "
+                    f"{step.__class__.__name__}"
+                )
+
+                self.events.step_started(
+                    step.__class__.__name__,
+                )
+
                 step.run(context)
+
+                metrics.steps_completed += 1
+
+                self.events.step_completed(
+                    step.__class__.__name__,
+                )
 
             context.finished_at = datetime.utcnow()
 
@@ -61,18 +105,34 @@ class PipelineExecutor:
                 PipelineStatus.COMPLETED,
             )
 
+            timer.stop()
+
+            metrics.duration_seconds = timer.duration
+
             duration = (
                 context.finished_at - start
             ).total_seconds()
+
+            self.logger.info(
+                f"Pipeline "
+                f"'{pipeline.config.name}' "
+                f"completed successfully."
+            )
+
+            self.events.pipeline_completed(
+                pipeline.config.name,
+            )
 
             return PipelineResult(
                 success=True,
                 status=context.status,
                 pipeline_name=pipeline.config.name,
+                execution_id=context.execution_id,
                 message="Pipeline completed successfully.",
                 started_at=start,
                 finished_at=context.finished_at,
                 duration_seconds=duration,
+                metrics=metrics,
                 metadata=context.metadata,
                 warnings=context.warnings,
             )
@@ -85,13 +145,21 @@ class PipelineExecutor:
                 PipelineStatus.FAILED,
             )
 
-            # NOTE:
-            # The failing PipelineStep has already recorded the
-            # exception via PipelineStep.on_error().
-            #
-            # We therefore DO NOT add the same error again here,
-            # otherwise the PipelineResult would contain duplicate
-            # error messages.
+            timer.stop()
+
+            metrics.duration_seconds = timer.duration
+
+            metrics.steps_failed += 1
+
+            self.logger.error(
+                f"Pipeline "
+                f"'{pipeline.config.name}' "
+                f"failed."
+            )
+
+            self.events.pipeline_failed(
+                pipeline.config.name,
+            )
 
             duration = (
                 context.finished_at - start
@@ -101,10 +169,12 @@ class PipelineExecutor:
                 success=False,
                 status=context.status,
                 pipeline_name=pipeline.config.name,
+                execution_id=context.execution_id,
                 message="Pipeline execution failed.",
                 started_at=start,
                 finished_at=context.finished_at,
                 duration_seconds=duration,
+                metrics=metrics,
                 metadata=context.metadata,
                 errors=context.errors,
                 warnings=context.warnings,
