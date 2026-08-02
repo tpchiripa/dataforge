@@ -1,14 +1,13 @@
 """
 DataForge Transform Step
 
-Pipeline step responsible for transforming data.
+Pipeline step responsible for transforming pipeline data.
 """
 
 from __future__ import annotations
 
-from typing import Callable
-
-import pandas as pd
+from collections.abc import Callable
+from typing import Any
 
 from pipelines.core.pipeline_context import PipelineContext
 from pipelines.steps.base.base_step import BaseStep
@@ -16,17 +15,17 @@ from pipelines.steps.base.base_step import BaseStep
 
 class TransformStep(BaseStep):
     """
-    Transform data inside the pipeline.
+    Transform pipeline data.
 
-    A transformation is simply a callable that accepts a
-    pandas DataFrame and returns a transformed DataFrame.
+    A transformation is a callable that accepts the current
+    pipeline dataset and returns the transformed dataset.
     """
 
     def __init__(
         self,
         name: str,
-        transformation: Callable[[pd.DataFrame], pd.DataFrame],
-    ):
+        transformation: Callable[[Any], Any],
+    ) -> None:
 
         super().__init__(
             name=name,
@@ -45,17 +44,22 @@ class TransformStep(BaseStep):
         Execute the transformation.
         """
 
-        dataframe = context.data.get("dataframe")
-
-        if dataframe is None:
+        if context.data is None:
 
             raise ValueError(
-                "No dataframe found in pipeline context."
+                "No input data available for transformation."
             )
 
-        transformed = self.transformation(dataframe)
+        transformed = self.transformation(
+            context.data,
+        )
 
-        context.data["dataframe"] = transformed
+        context.data = transformed
+
+        context.set(
+            "records_transformed",
+            len(transformed),
+        )
 
         context.add_metadata(
             "records_transformed",

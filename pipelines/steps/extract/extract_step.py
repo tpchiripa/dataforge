@@ -13,10 +13,10 @@ from pipelines.steps.base.base_step import BaseStep
 
 class ExtractStep(BaseStep):
     """
-    Extract data from a connector.
+    Extract data from a configured connector.
 
-    The extracted data is stored in the pipeline context for
-    downstream steps.
+    The extracted dataset is placed into the execution context
+    for downstream pipeline steps.
     """
 
     def __init__(
@@ -24,7 +24,7 @@ class ExtractStep(BaseStep):
         name: str,
         connector: BaseConnector,
         query: str,
-    ):
+    ) -> None:
 
         super().__init__(
             name=name,
@@ -32,7 +32,6 @@ class ExtractStep(BaseStep):
         )
 
         self.connector = connector
-
         self.query = query
 
     # ---------------------------------------------------------
@@ -46,14 +45,24 @@ class ExtractStep(BaseStep):
         """
 
         if not self.connector.connected:
-
             self.connector.connect()
 
         dataframe = self.connector.fetch_dataframe(
-            self.query
+            self.query,
         )
 
-        context.data["dataframe"] = dataframe
+        #
+        # Store extracted dataset
+        #
+        context.data = dataframe
+
+        #
+        # Store commonly used variables
+        #
+        context.set(
+            "records_extracted",
+            len(dataframe),
+        )
 
         context.add_metadata(
             "records_extracted",
@@ -63,4 +72,9 @@ class ExtractStep(BaseStep):
         context.add_metadata(
             "source_connector",
             self.connector.get_metadata().name,
+        )
+
+        context.add_metadata(
+            "extract_query",
+            self.query,
         )

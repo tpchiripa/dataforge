@@ -52,6 +52,21 @@ class PostgreSQLConnector(BaseConnector):
         self._connection: connection | None = None
 
     # ---------------------------------------------------------
+    # Configuration
+    # ---------------------------------------------------------
+
+    def validate_configuration(self) -> None:
+        """
+        Validate PostgreSQL connector configuration.
+        """
+
+        if self.config is None:
+            raise ValueError("Connector configuration is required.")
+
+        if not getattr(self.config, "name", None):
+            raise ValueError("Connector name is required.")
+
+    # ---------------------------------------------------------
     # Metadata
     # ---------------------------------------------------------
 

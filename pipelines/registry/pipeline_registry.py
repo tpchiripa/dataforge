@@ -1,23 +1,23 @@
 """
 DataForge Pipeline Registry
 
-Central registry for DataForge pipelines.
+Central registry for managing DataForge pipelines.
 """
 
 from __future__ import annotations
 
-from pipelines.core.exceptions import (DuplicatePipelineError,
-                                       PipelineNotFoundError)
+from collections import Counter
+
+from pipelines.core.exceptions import (
+    DuplicatePipelineError,
+    PipelineNotFoundError,
+)
 from pipelines.core.pipeline import Pipeline
 
 
 class PipelineRegistry:
     """
-    Registry responsible for storing and managing pipelines.
-
-    The registry is implemented as a singleton using class-level
-    storage so that pipelines are available globally throughout
-    the DataForge runtime.
+    Global registry responsible for storing DataForge pipelines.
     """
 
     _pipelines: dict[str, Pipeline] = {}
@@ -31,18 +31,35 @@ class PipelineRegistry:
         cls,
         pipeline: Pipeline,
     ) -> None:
-        """
-        Register a pipeline.
-        """
 
-        name = pipeline.config.name.lower()
+        key = pipeline.config.name.lower()
 
-        if name in cls._pipelines:
+        if key in cls._pipelines:
             raise DuplicatePipelineError(
-                f"Pipeline '{pipeline.config.name}' is already registered."
+                f"Pipeline '{pipeline.config.name}' already exists."
             )
 
-        cls._pipelines[name] = pipeline
+        cls._pipelines[key] = pipeline
+
+    # ---------------------------------------------------------
+
+    @classmethod
+    def update(
+        cls,
+        pipeline: Pipeline,
+    ) -> None:
+        """
+        Replace an existing pipeline.
+        """
+
+        key = pipeline.config.name.lower()
+
+        if key not in cls._pipelines:
+            raise PipelineNotFoundError(
+                pipeline.config.name
+            )
+
+        cls._pipelines[key] = pipeline
 
     # ---------------------------------------------------------
 
@@ -51,9 +68,6 @@ class PipelineRegistry:
         cls,
         pipeline_name: str,
     ) -> None:
-        """
-        Remove a pipeline from the registry.
-        """
 
         cls._pipelines.pop(
             pipeline_name.lower(),
@@ -67,9 +81,6 @@ class PipelineRegistry:
         cls,
         pipeline_name: str,
     ) -> Pipeline:
-        """
-        Retrieve a registered pipeline.
-        """
 
         pipeline = cls._pipelines.get(
             pipeline_name.lower()
@@ -77,7 +88,7 @@ class PipelineRegistry:
 
         if pipeline is None:
             raise PipelineNotFoundError(
-                f"Pipeline '{pipeline_name}' is not registered."
+                pipeline_name
             )
 
         return pipeline
@@ -89,71 +100,217 @@ class PipelineRegistry:
         cls,
         pipeline_name: str,
     ) -> bool:
-        """
-        Check whether a pipeline exists.
-        """
 
         return pipeline_name.lower() in cls._pipelines
 
     # ---------------------------------------------------------
-
-    @classmethod
-    def list_pipelines(cls) -> list[str]:
-        """
-        Return all registered pipeline names.
-        """
-
-        return sorted(cls._pipelines.keys())
-
+    # Listing
     # ---------------------------------------------------------
 
     @classmethod
-    def list(cls) -> list[Pipeline]:
-        """
-        Return all registered pipeline objects.
-        """
+    def list(
+        cls,
+    ) -> list[Pipeline]:
 
         return list(cls._pipelines.values())
 
     # ---------------------------------------------------------
 
     @classmethod
-    def clear(cls) -> None:
+    def list_names(
+        cls,
+    ) -> list[str]:
         """
-        Remove every registered pipeline.
+        Return display names.
+        """
 
-        Primarily useful for testing.
+        return sorted(
+            pipeline.config.name
+            for pipeline in cls._pipelines.values()
+        )
+
+    # ---------------------------------------------------------
+
+    @classmethod
+    def list_pipelines(
+        cls,
+    ) -> list[str]:
         """
+        Backwards-compatible alias.
+
+        Returns the registry keys (lowercase names)
+        expected by the legacy unit tests.
+        """
+
+        return sorted(
+            cls._pipelines.keys()
+        )
+
+    # ---------------------------------------------------------
+    # Searching
+    # ---------------------------------------------------------
+
+    @classmethod
+    def find_by_owner(
+        cls,
+        owner: str,
+    ) -> list[Pipeline]:
+
+        return [
+            pipeline
+            for pipeline in cls.list()
+            if pipeline.config.owner.lower()
+            == owner.lower()
+        ]
+
+    # ---------------------------------------------------------
+
+    @classmethod
+    def find_by_tag(
+        cls,
+        tag: str,
+    ) -> list[Pipeline]:
+
+        return [
+            pipeline
+            for pipeline in cls.list()
+            if tag.lower()
+            in {
+                t.lower()
+                for t in pipeline.config.tags
+            }
+        ]
+
+    # ---------------------------------------------------------
+
+    @classmethod
+    def find_by_source(
+        cls,
+        connector: str,
+    ) -> list[Pipeline]:
+
+        return [
+            pipeline
+            for pipeline in cls.list()
+            if pipeline.config.source_connector.lower()
+            == connector.lower()
+        ]
+
+    # ---------------------------------------------------------
+
+    @classmethod
+    def find_by_destination(
+        cls,
+        connector: str,
+    ) -> list[Pipeline]:
+
+        return [
+            pipeline
+            for pipeline in cls.list()
+            if pipeline.config.destination_connector.lower()
+            == connector.lower()
+        ]
+
+    # ---------------------------------------------------------
+
+    @classmethod
+    def enabled_pipelines(
+        cls,
+    ) -> list[Pipeline]:
+
+        return [
+            pipeline
+            for pipeline in cls.list()
+            if pipeline.config.enabled
+        ]
+
+    # ---------------------------------------------------------
+
+    @classmethod
+    def scheduled_pipelines(
+        cls,
+    ) -> list[Pipeline]:
+
+        return [
+            pipeline
+            for pipeline in cls.list()
+            if pipeline.config.schedule
+        ]
+
+    # ---------------------------------------------------------
+    # Statistics
+    # ---------------------------------------------------------
+
+    @classmethod
+    def statistics(
+        cls,
+    ) -> dict:
+
+        owners = Counter()
+        sources = Counter()
+        destinations = Counter()
+
+        for pipeline in cls.list():
+
+            if pipeline.config.owner:
+                owners[pipeline.config.owner] += 1
+
+            if pipeline.config.source_connector:
+                sources[
+                    pipeline.config.source_connector
+                ] += 1
+
+            if pipeline.config.destination_connector:
+                destinations[
+                    pipeline.config.destination_connector
+                ] += 1
+
+        return {
+            "registered": len(cls._pipelines),
+            "enabled": len(cls.enabled_pipelines()),
+            "disabled": len(cls._pipelines)
+            - len(cls.enabled_pipelines()),
+            "scheduled": len(
+                cls.scheduled_pipelines()
+            ),
+            "owners": dict(owners),
+            "source_connectors": dict(sources),
+            "destination_connectors": dict(
+                destinations
+            ),
+        }
+
+    # ---------------------------------------------------------
+
+    @classmethod
+    def clear(
+        cls,
+    ) -> None:
 
         cls._pipelines.clear()
 
     # ---------------------------------------------------------
-    # Convenience Properties
-    # ---------------------------------------------------------
 
     @property
-    def count(self) -> int:
-        """
-        Number of registered pipelines.
-        """
+    def count(
+        self,
+    ) -> int:
 
         return len(self._pipelines)
 
     # ---------------------------------------------------------
 
-    def __len__(self) -> int:
-        """
-        Return registry size.
-        """
+    def __len__(
+        self,
+    ):
 
         return len(self._pipelines)
 
     # ---------------------------------------------------------
 
-    def __iter__(self):
-        """
-        Iterate over registered pipelines.
-        """
+    def __iter__(
+        self,
+    ):
 
         return iter(self._pipelines.values())
 
@@ -163,19 +320,16 @@ class PipelineRegistry:
         self,
         pipeline_name: str,
     ) -> bool:
-        """
-        Support:
-            "etl" in registry
-        """
 
-        return self.exists(pipeline_name)
+        return self.exists(
+            pipeline_name,
+        )
 
     # ---------------------------------------------------------
 
-    def __repr__(self) -> str:
-        """
-        String representation.
-        """
+    def __repr__(
+        self,
+    ):
 
         return (
             f"PipelineRegistry("

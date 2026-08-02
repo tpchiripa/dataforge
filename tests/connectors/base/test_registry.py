@@ -7,10 +7,13 @@ from __future__ import annotations
 import pytest
 
 from connectors.base.base_connector import BaseConnector
-from connectors.base.exceptions import (ConnectorNotFoundError,
-                                        ConnectorRegistrationError)
+from connectors.base.exceptions import (
+    ConnectorNotFoundError,
+    ConnectorRegistrationError,
+)
 from connectors.base.registry import ConnectorRegistry
 from connectors.config.connector_config import ConnectorConfig
+
 
 # ---------------------------------------------------------
 # Dummy Connector
@@ -28,20 +31,17 @@ class DummyConnector(BaseConnector):
     def disconnect(self) -> None:
         self._connected = False
 
+    def test_connection(self) -> bool:
+        return self.connected
+
+    def validate_configuration(self) -> None:
+        return
+
     def read(self, *args, **kwargs):
-        """
-        Dummy read implementation.
-        """
         return []
 
-    def write(self, data, *args, **kwargs):
-        """
-        Dummy write implementation.
-        """
+    def write(self, data=None, *args, **kwargs):
         return None
-
-    def test_connection(self) -> bool:
-        return True
 
 
 # ---------------------------------------------------------
@@ -54,12 +54,20 @@ def clear_registry():
     """
     Ensure every test starts with a clean registry.
     """
-
     ConnectorRegistry.clear()
 
     yield
 
     ConnectorRegistry.clear()
+
+
+# ---------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------
+
+
+def make_config(name: str = "dummy") -> ConnectorConfig:
+    return ConnectorConfig(name=name)
 
 
 # ---------------------------------------------------------
@@ -106,7 +114,6 @@ def test_duplicate_registration():
     with pytest.raises(
         ConnectorRegistrationError,
     ):
-
         registry.register(
             "dummy",
             DummyConnector,
@@ -140,7 +147,6 @@ def test_connector_not_found():
     with pytest.raises(
         ConnectorNotFoundError,
     ):
-
         registry.get("missing")
 
 
@@ -305,11 +311,7 @@ def test_registry_returns_registered_class():
 
     connector_class = registry.get("dummy")
 
-    config = ConnectorConfig(
-        name="dummy",
-    )
-
-    connector = connector_class(config)
+    connector = connector_class(make_config())
 
     assert isinstance(
         connector,

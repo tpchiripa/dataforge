@@ -23,15 +23,21 @@ class DummyConnector(BaseConnector):
     """
 
     def connect(self) -> None:
-
         self._connected = True
 
     def disconnect(self) -> None:
-
         self._connected = False
 
-    def read(self, *args, **kwargs):
+    def test_connection(self) -> bool:
+        return True
 
+    def validate_configuration(self) -> None:
+        """
+        Dummy configuration validation used for testing.
+        """
+        return
+
+    def read(self, *args, **kwargs):
         return []
 
     def write(
@@ -40,12 +46,7 @@ class DummyConnector(BaseConnector):
         *args,
         **kwargs,
     ) -> None:
-
         return None
-
-    def test_connection(self) -> bool:
-
-        return True
 
 
 # ---------------------------------------------------------
@@ -55,7 +56,6 @@ class DummyConnector(BaseConnector):
 
 @pytest.fixture(autouse=True)
 def clear_registry():
-
     ConnectorRegistry.clear()
 
     yield
@@ -69,7 +69,6 @@ def clear_registry():
 
 
 def make_config() -> ConnectorConfig:
-
     return ConnectorConfig(
         name="dummy",
     )
@@ -81,7 +80,6 @@ def make_config() -> ConnectorConfig:
 
 
 def test_factory_initialization():
-
     factory = ConnectorFactory()
 
     assert factory.registry is not None
@@ -91,7 +89,6 @@ def test_factory_initialization():
 
 
 def test_create_connector():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -114,7 +111,6 @@ def test_create_connector():
 
 
 def test_connector_configuration():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -136,13 +132,11 @@ def test_connector_configuration():
 
 
 def test_connector_not_found():
-
     factory = ConnectorFactory()
 
     with pytest.raises(
         ConnectorNotFoundError,
     ):
-
         factory.create(
             "missing",
             make_config(),
@@ -153,7 +147,6 @@ def test_connector_not_found():
 
 
 def test_available_connectors():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -176,7 +169,6 @@ def test_available_connectors():
 
 
 def test_exists():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -185,7 +177,6 @@ def test_exists():
     factory = ConnectorFactory()
 
     assert factory.exists("dummy")
-
     assert not factory.exists("postgres")
 
 
@@ -193,7 +184,6 @@ def test_exists():
 
 
 def test_registry_property():
-
     factory = ConnectorFactory()
 
     assert factory.registry is ConnectorRegistry
@@ -203,7 +193,6 @@ def test_registry_property():
 
 
 def test_create_multiple_instances():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -228,7 +217,6 @@ def test_create_multiple_instances():
 
 
 def test_connector_type():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -251,7 +239,6 @@ def test_connector_type():
 
 
 def test_repr():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -262,7 +249,6 @@ def test_repr():
     representation = repr(factory)
 
     assert "ConnectorFactory" in representation
-
     assert "1" in representation
 
 
@@ -270,7 +256,6 @@ def test_repr():
 
 
 def test_factory_uses_custom_registry():
-
     registry = ConnectorRegistry()
 
     registry.register(
@@ -297,7 +282,6 @@ def test_factory_uses_custom_registry():
 
 
 def test_factory_returns_new_connector_each_time():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,

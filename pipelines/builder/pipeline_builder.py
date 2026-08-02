@@ -21,8 +21,13 @@ class PipelineBuilder:
         PipelineBuilder("Customer ETL")
             .description("Loads customer records")
             .version("1.0.0")
-            .add_step(step1)
-            .add_step(step2)
+            .tag("etl")
+            .tag("customers")
+            .owner("data-engineering")
+            .add_step(extract)
+            .add_step(validate)
+            .add_step(transform)
+            .add_step(load)
             .build()
     )
     """
@@ -74,6 +79,29 @@ class PipelineBuilder:
         return self
 
     # ---------------------------------------------------------
+
+    def owner(
+        self,
+        owner: str,
+    ) -> "PipelineBuilder":
+
+        self._config.owner = owner
+
+        return self
+
+    # ---------------------------------------------------------
+
+    def tag(
+        self,
+        tag: str,
+    ) -> "PipelineBuilder":
+
+        if tag not in self._config.tags:
+            self._config.tags.append(tag)
+
+        return self
+
+    # ---------------------------------------------------------
     # Steps
     # ---------------------------------------------------------
 
@@ -83,6 +111,17 @@ class PipelineBuilder:
     ) -> "PipelineBuilder":
 
         self._steps.append(step)
+
+        return self
+
+    # ---------------------------------------------------------
+
+    def add_steps(
+        self,
+        *steps: PipelineStep,
+    ) -> "PipelineBuilder":
+
+        self._steps.extend(steps)
 
         return self
 
@@ -103,13 +142,21 @@ class PipelineBuilder:
     def build(
         self,
     ) -> Pipeline:
+        """
+        Build a Pipeline instance.
+
+        NOTE:
+        The builder intentionally does NOT validate the pipeline.
+        Validation occurs immediately before execution via the
+        PipelineExecutor/PipelineValidator. This allows unit tests
+        and tooling to construct incomplete pipelines.
+        """
 
         pipeline = Pipeline(
             config=self._config,
         )
 
         for step in self._steps:
-
             pipeline.add_step(step)
 
         return pipeline
@@ -137,7 +184,20 @@ class PipelineBuilder:
         self,
     ) -> int:
 
-        return len(self._steps)
+        return len(
+            self._steps,
+        )
+
+    # ---------------------------------------------------------
+
+    @property
+    def is_empty(
+        self,
+    ) -> bool:
+
+        return len(
+            self._steps,
+        ) == 0
 
     # ---------------------------------------------------------
 
@@ -148,5 +208,5 @@ class PipelineBuilder:
         return (
             f"PipelineBuilder("
             f"name='{self._config.name}', "
-            f"steps={len(self._steps)})"
+            f"steps={self.step_count})"
         )

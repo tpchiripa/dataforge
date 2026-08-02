@@ -27,7 +27,6 @@ class BaseConnector(ABC):
     ) -> None:
 
         self.config = config
-
         self._connected = False
 
     # ---------------------------------------------------------
@@ -35,27 +34,84 @@ class BaseConnector(ABC):
     # ---------------------------------------------------------
 
     @abstractmethod
-    def connect(self) -> None:
+    def connect(
+        self,
+    ) -> None:
         """
         Establish a connection.
         """
 
     @abstractmethod
-    def disconnect(self) -> None:
+    def disconnect(
+        self,
+    ) -> None:
         """
         Close the connection.
         """
 
     @abstractmethod
-    def test_connection(self) -> bool:
+    def test_connection(
+        self,
+    ) -> bool:
         """
         Test connectivity.
-
-        Returns
-        -------
-        bool
-            True if the connection succeeds.
         """
+
+    # ---------------------------------------------------------
+    # Configuration
+    # ---------------------------------------------------------
+
+    @abstractmethod
+    def validate_configuration(
+        self,
+    ) -> None:
+        """
+        Validate connector configuration.
+        """
+
+    # ---------------------------------------------------------
+    # Metadata
+    # ---------------------------------------------------------
+
+    @property
+    def name(
+        self,
+    ) -> str:
+        return self.config.name
+
+    # ---------------------------------------------------------
+
+    @property
+    def connector_type(
+        self,
+    ) -> str:
+        return self.__class__.__name__
+
+    # ---------------------------------------------------------
+
+    @property
+    def connected(
+        self,
+    ) -> bool:
+        return self._connected
+
+    # ---------------------------------------------------------
+
+    @property
+    def capabilities(
+        self,
+    ) -> dict[str, bool]:
+        """
+        Capabilities supported by the connector.
+        """
+
+        return {
+            "read": True,
+            "write": True,
+            "streaming": False,
+            "transactions": False,
+            "schema_discovery": False,
+        }
 
     # ---------------------------------------------------------
     # Data Operations
@@ -68,7 +124,7 @@ class BaseConnector(ABC):
         **kwargs: Any,
     ) -> Any:
         """
-        Read data from the source.
+        Read data.
         """
 
     @abstractmethod
@@ -78,27 +134,78 @@ class BaseConnector(ABC):
         **kwargs: Any,
     ) -> Any:
         """
-        Write data to the source.
+        Write data.
         """
 
     # ---------------------------------------------------------
-    # Properties
+    # Lifecycle Hooks
     # ---------------------------------------------------------
 
-    @property
-    def connected(self) -> bool:
+    def before_connect(
+        self,
+    ) -> None:
         """
-        Returns connection status.
+        Hook executed before connect().
         """
-
-        return self._connected
+        return
 
     # ---------------------------------------------------------
 
-    def __enter__(self):
+    def after_connect(
+        self,
+    ) -> None:
+        """
+        Hook executed after connect().
+        """
+        return
 
+    # ---------------------------------------------------------
+
+    def before_disconnect(
+        self,
+    ) -> None:
+        """
+        Hook executed before disconnect().
+        """
+        return
+
+    # ---------------------------------------------------------
+
+    def after_disconnect(
+        self,
+    ) -> None:
+        """
+        Hook executed after disconnect().
+        """
+        return
+
+    # ---------------------------------------------------------
+    # Health
+    # ---------------------------------------------------------
+
+    def health(
+        self,
+    ) -> dict[str, Any]:
+        """
+        Connector health information.
+        """
+
+        return {
+            "name": self.name,
+            "type": self.connector_type,
+            "connected": self.connected,
+        }
+
+    # ---------------------------------------------------------
+    # Context Manager
+    # ---------------------------------------------------------
+
+    def __enter__(
+        self,
+    ):
+        self.before_connect()
         self.connect()
-
+        self.after_connect()
         return self
 
     # ---------------------------------------------------------
@@ -109,15 +216,17 @@ class BaseConnector(ABC):
         exc_val,
         exc_tb,
     ) -> None:
-
+        self.before_disconnect()
         self.disconnect()
+        self.after_disconnect()
 
     # ---------------------------------------------------------
 
-    def __repr__(self) -> str:
-
+    def __repr__(
+        self,
+    ) -> str:
         return (
-            f"{self.__class__.__name__}("
-            f"name='{self.config.name}', "
+            f"{self.connector_type}("
+            f"name='{self.name}', "
             f"connected={self.connected})"
         )

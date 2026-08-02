@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 from pipelines.core.pipeline_context import PipelineContext
 from pipelines.steps.base.base_step import BaseStep
 
@@ -31,7 +30,7 @@ class LoadStep(BaseStep):
     - MinIO
     - S3
     - Delta Lake
-    - Iceberg
+    - Apache Iceberg
     - Kafka
     """
 
@@ -97,9 +96,15 @@ class LoadStep(BaseStep):
                 f"Unsupported file format: {self.file_format}"
             )
 
+        records = len(dataframe)
+
+        # -----------------------------------------------------
+        # Metadata
+        # -----------------------------------------------------
+
         context.add_metadata(
             "records_loaded",
-            len(dataframe),
+            records,
         )
 
         context.add_metadata(
@@ -115,4 +120,21 @@ class LoadStep(BaseStep):
         context.add_metadata(
             "load_completed",
             True,
+        )
+
+        # -----------------------------------------------------
+        # Execution Result
+        # -----------------------------------------------------
+
+        context.result.records_written = records
+
+        context.result.output_location = str(
+            self.output_path
+        )
+
+        context.result.metadata.update(
+            {
+                "output_format": self.file_format,
+                "output_location": str(self.output_path),
+            }
         )

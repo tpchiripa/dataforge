@@ -26,6 +26,8 @@ class PipelineConfig:
 
     enabled: bool = True
 
+    owner: str = ""
+
     # ---------------------------------------------------------
     # Source & Destination
     # ---------------------------------------------------------
@@ -42,13 +44,15 @@ class PipelineConfig:
     # Execution
     # ---------------------------------------------------------
 
-    batch_size: int = 10000
+    batch_size: int = 10_000
 
     max_retries: int = 3
 
     retry_delay_seconds: int = 5
 
     timeout_seconds: int = 3600
+
+    schedule: str = ""
 
     # ---------------------------------------------------------
     # Validation
@@ -57,6 +61,16 @@ class PipelineConfig:
     validate_before_run: bool = True
 
     stop_on_error: bool = True
+
+    # ---------------------------------------------------------
+    # Notifications
+    # ---------------------------------------------------------
+
+    notify_on_success: bool = False
+
+    notify_on_failure: bool = True
+
+    notification_email: str = ""
 
     # ---------------------------------------------------------
     # Metadata
@@ -69,24 +83,112 @@ class PipelineConfig:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     # ---------------------------------------------------------
-    # Helper Methods
+    # Parameter Helpers
     # ---------------------------------------------------------
 
-    def add_parameter(self, key: str, value: Any) -> None:
+    def set_parameter(
+        self,
+        key: str,
+        value: Any,
+    ) -> None:
         """
-        Add or update a pipeline parameter.
+        Set or update a pipeline parameter.
         """
+
         self.parameters[key] = value
 
-    def add_metadata(self, key: str, value: Any) -> None:
+    def get_parameter(
+        self,
+        key: str,
+        default: Any = None,
+    ) -> Any:
         """
-        Add or update pipeline metadata.
+        Retrieve a pipeline parameter.
         """
+
+        return self.parameters.get(
+            key,
+            default,
+        )
+
+    # ---------------------------------------------------------
+    # Metadata Helpers
+    # ---------------------------------------------------------
+
+    def set_metadata(
+        self,
+        key: str,
+        value: Any,
+    ) -> None:
+        """
+        Set pipeline metadata.
+        """
+
         self.metadata[key] = value
 
-    def add_tag(self, tag: str) -> None:
+    def get_metadata(
+        self,
+        key: str,
+        default: Any = None,
+    ) -> Any:
+        """
+        Retrieve pipeline metadata.
+        """
+
+        return self.metadata.get(
+            key,
+            default,
+        )
+
+    # ---------------------------------------------------------
+    # Tag Helpers
+    # ---------------------------------------------------------
+
+    def add_tag(
+        self,
+        tag: str,
+    ) -> None:
         """
         Add a tag if it does not already exist.
         """
+
         if tag not in self.tags:
             self.tags.append(tag)
+
+    def remove_tag(
+        self,
+        tag: str,
+    ) -> None:
+        """
+        Remove a tag.
+        """
+
+        if tag in self.tags:
+            self.tags.remove(tag)
+
+    # ---------------------------------------------------------
+    # Convenience Properties
+    # ---------------------------------------------------------
+
+    @property
+    def retry_enabled(
+        self,
+    ) -> bool:
+        """
+        Returns True if retries are enabled.
+        """
+
+        return self.max_retries > 0
+
+    @property
+    def notifications_enabled(
+        self,
+    ) -> bool:
+        """
+        Returns True if any notifications are enabled.
+        """
+
+        return (
+            self.notify_on_success
+            or self.notify_on_failure
+        )

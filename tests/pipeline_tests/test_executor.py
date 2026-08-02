@@ -210,7 +210,8 @@ def test_repr():
 
     executor = PipelineExecutor()
 
-    assert (
-        repr(executor)
-        == "PipelineExecutor()"
-    )
+    representation = repr(executor)
+
+    assert "PipelineExecutor" in representation
+
+    assert "plugins=" in representation

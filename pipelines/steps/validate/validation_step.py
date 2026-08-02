@@ -15,16 +15,18 @@ from pipelines.steps.base.base_step import BaseStep
 
 class ValidationStep(BaseStep):
     """
-    Validate extracted data before transformation.
+    Validate pipeline data before loading.
 
-    This step performs generic validation checks.
+    Performs baseline validation and records
+    quality metrics for downstream monitoring.
 
     Future versions will support:
 
     - Schema validation
-    - Data quality rules
     - Great Expectations
     - Custom validation plugins
+    - Business rules
+    - Referential integrity
     """
 
     def __init__(
@@ -34,7 +36,7 @@ class ValidationStep(BaseStep):
 
         super().__init__(
             name=name,
-            description="Validate extracted data.",
+            description="Validate pipeline data.",
         )
 
     # ---------------------------------------------------------
@@ -44,27 +46,24 @@ class ValidationStep(BaseStep):
         context: PipelineContext,
     ) -> None:
         """
-        Validate the extracted dataframe.
+        Validate the dataframe.
         """
 
         dataframe = context.data.get("dataframe")
 
         if dataframe is None:
-
             raise PipelineValidationError(
                 "No dataframe found in pipeline context."
             )
 
         if not isinstance(dataframe, pd.DataFrame):
-
             raise PipelineValidationError(
-                "Context object is not a pandas DataFrame."
+                "Pipeline object is not a pandas DataFrame."
             )
 
         if dataframe.empty:
-
             raise PipelineValidationError(
-                "Extracted dataframe is empty."
+                "Pipeline dataframe is empty."
             )
 
         records = len(dataframe)
@@ -79,24 +78,42 @@ class ValidationStep(BaseStep):
             dataframe.duplicated().sum()
         )
 
+        # -----------------------------------------------------
+        # Warnings
+        # -----------------------------------------------------
+
+        if missing_values > 0:
+
+            context.add_warning(
+                f"{missing_values} missing values detected."
+            )
+
+        if duplicate_rows > 0:
+
+            context.add_warning(
+                f"{duplicate_rows} duplicate rows detected."
+            )
+
+        # -----------------------------------------------------
+        # Validation Summary
+        # -----------------------------------------------------
+
+        validation_summary = {
+            "records": records,
+            "columns": columns,
+            "missing_values": missing_values,
+            "duplicate_rows": duplicate_rows,
+            "passed": True,
+        }
+
+        context.add_metadata(
+            "validation",
+            validation_summary,
+        )
+
         context.add_metadata(
             "records_validated",
             records,
-        )
-
-        context.add_metadata(
-            "column_count",
-            columns,
-        )
-
-        context.add_metadata(
-            "missing_values",
-            missing_values,
-        )
-
-        context.add_metadata(
-            "duplicate_rows",
-            duplicate_rows,
         )
 
         context.add_metadata(

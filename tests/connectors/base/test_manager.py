@@ -22,27 +22,28 @@ class DummyConnector(BaseConnector):
     """
 
     def connect(self) -> None:
-
         self._connected = True
 
     def disconnect(self) -> None:
-
         self._connected = False
 
-    def read(self):
+    def test_connection(self) -> bool:
+        return True
 
+    def validate_configuration(self) -> None:
+        """
+        Dummy configuration validation used for testing.
+        """
+        return
+
+    def read(self):
         return []
 
     def write(
         self,
         data,
     ) -> None:
-
         pass
-
-    def test_connection(self) -> bool:
-
-        return True
 
 
 # ---------------------------------------------------------
@@ -52,7 +53,6 @@ class DummyConnector(BaseConnector):
 
 @pytest.fixture(autouse=True)
 def clear_registry():
-
     ConnectorRegistry.clear()
 
     yield
@@ -66,7 +66,6 @@ def clear_registry():
 
 
 def make_config() -> ConnectorConfig:
-
     return ConnectorConfig(
         name="dummy",
     )
@@ -78,7 +77,6 @@ def make_config() -> ConnectorConfig:
 
 
 def test_manager_initialization():
-
     manager = ConnectorManager()
 
     assert manager.count == 0
@@ -88,7 +86,6 @@ def test_manager_initialization():
 
 
 def test_create_connector():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -113,7 +110,6 @@ def test_create_connector():
 
 
 def test_get_connector():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -137,7 +133,6 @@ def test_get_connector():
 
 
 def test_exists():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -151,7 +146,6 @@ def test_exists():
     )
 
     assert manager.exists("dummy")
-
     assert not manager.exists("postgres")
 
 
@@ -159,7 +153,6 @@ def test_exists():
 
 
 def test_remove_connector():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -181,7 +174,6 @@ def test_remove_connector():
 
 
 def test_connect_all():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -203,7 +195,6 @@ def test_connect_all():
 
 
 def test_disconnect_all():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -227,7 +218,6 @@ def test_disconnect_all():
 
 
 def test_connected():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -245,7 +235,6 @@ def test_connected():
     connected = manager.connected()
 
     assert connector in connected
-
     assert len(connected) == 1
 
 
@@ -253,7 +242,6 @@ def test_connected():
 
 
 def test_disconnected():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -269,7 +257,6 @@ def test_disconnected():
     disconnected = manager.disconnected()
 
     assert connector in disconnected
-
     assert len(disconnected) == 1
 
 
@@ -277,7 +264,6 @@ def test_disconnected():
 
 
 def test_list():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -299,7 +285,6 @@ def test_list():
 
 
 def test_clear():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -321,7 +306,6 @@ def test_clear():
 
 
 def test_len():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -341,7 +325,6 @@ def test_len():
 
 
 def test_repr():
-
     ConnectorRegistry.register(
         "dummy",
         DummyConnector,
@@ -357,7 +340,6 @@ def test_repr():
     representation = repr(manager)
 
     assert "ConnectorManager" in representation
-
     assert "1" in representation
 
 
@@ -365,7 +347,6 @@ def test_repr():
 
 
 def test_multiple_connectors():
-
     ConnectorRegistry.register(
         "dummy1",
         DummyConnector,
