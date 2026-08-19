@@ -17,8 +17,8 @@ class ValidationStep(BaseStep):
     """
     Validate pipeline data before loading.
 
-    Performs baseline validation and records
-    quality metrics for downstream monitoring.
+    Performs baseline validation and records quality metrics
+    for downstream monitoring.
 
     Future versions will support:
 
@@ -32,7 +32,7 @@ class ValidationStep(BaseStep):
     def __init__(
         self,
         name: str = "Validation",
-    ):
+    ) -> None:
 
         super().__init__(
             name=name,
@@ -46,24 +46,30 @@ class ValidationStep(BaseStep):
         context: PipelineContext,
     ) -> None:
         """
-        Validate the dataframe.
+        Validate the dataframe stored in context.data.
         """
 
-        dataframe = context.data.get("dataframe")
+        dataframe = context.data
 
         if dataframe is None:
+
             raise PipelineValidationError(
-                "No dataframe found in pipeline context."
+                "No dataframe found in pipeline context.",
             )
 
-        if not isinstance(dataframe, pd.DataFrame):
+        if not isinstance(
+            dataframe,
+            pd.DataFrame,
+        ):
+
             raise PipelineValidationError(
-                "Pipeline object is not a pandas DataFrame."
+                "Pipeline object is not a pandas DataFrame.",
             )
 
         if dataframe.empty:
+
             raise PipelineValidationError(
-                "Pipeline dataframe is empty."
+                "Pipeline dataframe is empty.",
             )
 
         records = len(dataframe)
@@ -71,11 +77,14 @@ class ValidationStep(BaseStep):
         columns = len(dataframe.columns)
 
         missing_values = int(
-            dataframe.isna().sum().sum()
+            dataframe.isna()
+            .sum()
+            .sum()
         )
 
         duplicate_rows = int(
-            dataframe.duplicated().sum()
+            dataframe.duplicated()
+            .sum()
         )
 
         # -----------------------------------------------------
@@ -85,13 +94,13 @@ class ValidationStep(BaseStep):
         if missing_values > 0:
 
             context.add_warning(
-                f"{missing_values} missing values detected."
+                f"{missing_values} missing values detected.",
             )
 
         if duplicate_rows > 0:
 
             context.add_warning(
-                f"{duplicate_rows} duplicate rows detected."
+                f"{duplicate_rows} duplicate rows detected.",
             )
 
         # -----------------------------------------------------
@@ -119,4 +128,9 @@ class ValidationStep(BaseStep):
         context.add_metadata(
             "validation_passed",
             True,
+        )
+
+        context.result.records_read = max(
+            context.result.records_read,
+            records,
         )

@@ -6,13 +6,12 @@ Responsible for executing DataForge pipelines.
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from pipelines.container.service_container import ServiceContainer
 from pipelines.core.pipeline import Pipeline
 from pipelines.core.pipeline_context import PipelineContext
 from pipelines.core.pipeline_result import PipelineResult
 from pipelines.core.pipeline_status import PipelineStatus
+from pipelines.execution.execution_timer import ExecutionTimer
 from pipelines.lifecycle.lifecycle_manager import LifecycleManager
 from pipelines.plugins.plugin_manager import PluginManager
 
@@ -20,6 +19,15 @@ from pipelines.plugins.plugin_manager import PluginManager
 class PipelineExecutor:
     """
     Executes DataForge pipelines.
+
+    The executor is responsible for:
+
+    - Pipeline validation
+    - Pipeline lifecycle management
+    - Step execution
+    - Step execution metrics
+    - Execution timing
+    - Pipeline finalization
     """
 
     def __init__(
@@ -34,15 +42,21 @@ class PipelineExecutor:
         If omitted, sensible defaults are created for testing.
         """
 
-        self.lifecycle = lifecycle or LifecycleManager()
-
-        self.plugins = plugins or PluginManager(
-            ServiceContainer(),
+        self.lifecycle = (
+            lifecycle
+            or LifecycleManager()
         )
 
-    # ---------------------------------------------------------
+        self.plugins = (
+            plugins
+            or PluginManager(
+                ServiceContainer(),
+            )
+        )
+
+    # =========================================================
     # Public API
-    # ---------------------------------------------------------
+    # =========================================================
 
     def execute(
         self,
@@ -52,27 +66,61 @@ class PipelineExecutor:
         Execute a pipeline.
         """
 
+        # -----------------------------------------------------
+        # Validate pipeline
+        # -----------------------------------------------------
+
         self._validate_pipeline(
             pipeline,
         )
+
+        # -----------------------------------------------------
+        # Create execution context
+        # -----------------------------------------------------
 
         context = self._create_context(
             pipeline,
         )
 
-        start = datetime.utcnow()
+        # -----------------------------------------------------
+        # Create execution timer
+        # -----------------------------------------------------
 
-        context.started_at = start
+        timer = ExecutionTimer()
+
+        # -----------------------------------------------------
+        # Initialize execution
+        # -----------------------------------------------------
+
+        timer.start()
+
+        context.started_at = timer._started
 
         context.set_status(
             PipelineStatus.RUNNING,
         )
+
+        # -----------------------------------------------------
+        # Initialize step metrics
+        # -----------------------------------------------------
+
+        context.start_metrics(
+            len(pipeline.steps),
+        )
+
+        # -----------------------------------------------------
+        # Pipeline lifecycle
+        # -----------------------------------------------------
 
         self.lifecycle.before_pipeline(
             context,
         )
 
         try:
+
+            # =================================================
+            # Execute Pipeline Steps
+            # =================================================
 
             for step in pipeline.steps:
 
@@ -83,26 +131,60 @@ class PipelineExecutor:
 
                 try:
 
+                    # -----------------------------------------
+                    # Execute step
+                    # -----------------------------------------
+
                     step.run(
                         context,
                     )
+
+                    # -----------------------------------------
+                    # Record successful step
+                    # -----------------------------------------
+
+                    context.step_completed()
+
+                    # -----------------------------------------
+                    # Step lifecycle
+                    # -----------------------------------------
 
                     self.lifecycle.after_step(
                         step,
                         context,
                     )
 
-                except Exception as ex:
+                except Exception as exc:
+
+                    # -----------------------------------------
+                    # Record failed step
+                    # -----------------------------------------
+
+                    context.step_failed()
+
+                    # -----------------------------------------
+                    # Step lifecycle error
+                    # -----------------------------------------
 
                     self.lifecycle.on_step_error(
                         step,
                         context,
-                        ex,
+                        exc,
                     )
 
                     raise
 
-            context.finished_at = datetime.utcnow()
+            # =================================================
+            # Pipeline Completed
+            # =================================================
+
+            timer.stop()
+
+            context.finished_at = timer._finished
+
+            context.metrics.duration_seconds = (
+                timer.duration
+            )
 
             context.set_status(
                 PipelineStatus.COMPLETED,
@@ -112,25 +194,26 @@ class PipelineExecutor:
                 context,
             )
 
-            duration = (
-                context.finished_at - start
-            ).total_seconds()
-
-            return PipelineResult(
+            return context.finalize(
                 success=True,
-                status=context.status,
-                pipeline_name=pipeline.config.name,
-                message="Pipeline completed successfully.",
-                started_at=start,
-                finished_at=context.finished_at,
-                duration_seconds=duration,
-                metadata=context.metadata,
-                warnings=context.warnings,
+                message=(
+                    "Pipeline completed successfully."
+                ),
             )
 
-        except Exception as ex:
+        # =====================================================
+        # Pipeline Failed
+        # =====================================================
 
-            context.finished_at = datetime.utcnow()
+        except Exception as exc:
+
+            timer.stop()
+
+            context.finished_at = timer._finished
+
+            context.metrics.duration_seconds = (
+                timer.duration
+            )
 
             context.set_status(
                 PipelineStatus.FAILED,
@@ -138,27 +221,19 @@ class PipelineExecutor:
 
             self.lifecycle.on_pipeline_error(
                 context,
-                ex,
+                exc,
             )
 
-            duration = (
-                context.finished_at - start
-            ).total_seconds()
-
-            return PipelineResult(
+            return context.finalize(
                 success=False,
-                status=context.status,
-                pipeline_name=pipeline.config.name,
-                message="Pipeline execution failed.",
-                started_at=start,
-                finished_at=context.finished_at,
-                duration_seconds=duration,
-                metadata=context.metadata,
-                errors=context.errors,
-                warnings=context.warnings,
+                message=(
+                    "Pipeline execution failed."
+                ),
             )
 
-    # ---------------------------------------------------------
+    # =========================================================
+    # Shutdown
+    # =========================================================
 
     def shutdown(
         self,
@@ -169,27 +244,39 @@ class PipelineExecutor:
 
         self.plugins.shutdown_all()
 
-    # ---------------------------------------------------------
+    # =========================================================
+    # Validation
+    # =========================================================
 
     def _validate_pipeline(
         self,
         pipeline: Pipeline,
     ) -> None:
+        """
+        Validate the pipeline before execution.
+        """
 
         pipeline.validate()
 
-    # ---------------------------------------------------------
+    # =========================================================
+    # Context Creation
+    # =========================================================
 
     def _create_context(
         self,
         pipeline: Pipeline,
     ) -> PipelineContext:
+        """
+        Create a runtime execution context.
+        """
 
         return PipelineContext(
             config=pipeline.config,
         )
 
-    # ---------------------------------------------------------
+    # =========================================================
+    # Representation
+    # =========================================================
 
     def __repr__(
         self,

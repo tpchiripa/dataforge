@@ -47,13 +47,19 @@ class LoadStep(BaseStep):
             description="Load transformed data.",
         )
 
-        self.output_path = Path(output_path)
+        self.output_path = Path(
+            output_path,
+        )
 
-        self.file_format = file_format.lower()
+        self.file_format = (
+            file_format.lower()
+        )
 
         self.index = index
 
-    # ---------------------------------------------------------
+    # =========================================================
+    # Execution
+    # =========================================================
 
     def execute(
         self,
@@ -63,18 +69,34 @@ class LoadStep(BaseStep):
         Load the dataframe.
         """
 
-        dataframe = context.data.get("dataframe")
+        dataframe = context.data
 
         if dataframe is None:
-
             raise ValueError(
                 "No dataframe found in pipeline context."
             )
+
+        # -----------------------------------------------------
+        # Validate dataframe interface
+        # -----------------------------------------------------
+
+        if not hasattr(dataframe, "to_csv"):
+            raise TypeError(
+                "Pipeline data does not support dataframe output."
+            )
+
+        # -----------------------------------------------------
+        # Create output directory
+        # -----------------------------------------------------
 
         self.output_path.parent.mkdir(
             parents=True,
             exist_ok=True,
         )
+
+        # -----------------------------------------------------
+        # Write output
+        # -----------------------------------------------------
 
         if self.file_format == "csv":
 
@@ -93,17 +115,31 @@ class LoadStep(BaseStep):
         else:
 
             raise ValueError(
-                f"Unsupported file format: {self.file_format}"
+                f"Unsupported file format: "
+                f"{self.file_format}"
             )
+
+        # -----------------------------------------------------
+        # Record load metrics
+        # -----------------------------------------------------
 
         records = len(dataframe)
 
+        context.records_written(
+            records,
+        )
+
         # -----------------------------------------------------
-        # Metadata
+        # Execution Metadata
         # -----------------------------------------------------
 
         context.add_metadata(
             "records_loaded",
+            records,
+        )
+
+        context.add_metadata(
+            "records_written",
             records,
         )
 
@@ -120,21 +156,4 @@ class LoadStep(BaseStep):
         context.add_metadata(
             "load_completed",
             True,
-        )
-
-        # -----------------------------------------------------
-        # Execution Result
-        # -----------------------------------------------------
-
-        context.result.records_written = records
-
-        context.result.output_location = str(
-            self.output_path
-        )
-
-        context.result.metadata.update(
-            {
-                "output_format": self.file_format,
-                "output_location": str(self.output_path),
-            }
         )

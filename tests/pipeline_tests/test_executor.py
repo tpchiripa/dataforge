@@ -11,24 +11,29 @@ from pipelines.core.pipeline_status import PipelineStatus
 from pipelines.executor.pipeline_executor import PipelineExecutor
 from pipelines.steps.base.base_step import BaseStep
 
+
 # ---------------------------------------------------------
 # Dummy Steps
 # ---------------------------------------------------------
 
 
 class DummyStep(BaseStep):
+    """
+    Simple successful pipeline step used for testing.
+    """
 
-    def __init__(self):
-
+    def __init__(
+        self,
+        name: str = "Dummy Step",
+    ) -> None:
         super().__init__(
-            name="Dummy Step",
+            name=name,
         )
 
     def execute(
         self,
         context: PipelineContext,
-    ):
-
+    ) -> None:
         context.add_metadata(
             "executed",
             True,
@@ -36,18 +41,22 @@ class DummyStep(BaseStep):
 
 
 class FailingStep(BaseStep):
+    """
+    Pipeline step that deliberately fails.
+    """
 
-    def __init__(self):
-
+    def __init__(
+        self,
+        name: str = "Failing Step",
+    ) -> None:
         super().__init__(
-            name="Failing Step",
+            name=name,
         )
 
     def execute(
         self,
         context: PipelineContext,
-    ):
-
+    ) -> None:
         raise RuntimeError(
             "Boom!"
         )
@@ -59,6 +68,9 @@ class FailingStep(BaseStep):
 
 
 def build_pipeline():
+    """
+    Build a simple pipeline containing one successful step.
+    """
 
     builder = PipelineBuilder(
         "Test Pipeline",
@@ -77,14 +89,12 @@ def build_pipeline():
 
 
 def test_executor_initialization():
-
     executor = PipelineExecutor()
 
     assert executor is not None
 
 
 def test_create_context():
-
     executor = PipelineExecutor()
 
     pipeline = build_pipeline()
@@ -97,7 +107,6 @@ def test_create_context():
 
 
 def test_validate_pipeline():
-
     executor = PipelineExecutor()
 
     pipeline = build_pipeline()
@@ -108,7 +117,6 @@ def test_validate_pipeline():
 
 
 def test_execute_returns_result():
-
     executor = PipelineExecutor()
 
     pipeline = build_pipeline()
@@ -124,7 +132,6 @@ def test_execute_returns_result():
 
 
 def test_execute_success():
-
     executor = PipelineExecutor()
 
     pipeline = build_pipeline()
@@ -142,7 +149,6 @@ def test_execute_success():
 
 
 def test_execute_records_metadata():
-
     executor = PipelineExecutor()
 
     pipeline = build_pipeline()
@@ -158,7 +164,6 @@ def test_execute_records_metadata():
 
 
 def test_execute_failure():
-
     builder = PipelineBuilder(
         "Failure Pipeline",
     )
@@ -184,7 +189,6 @@ def test_execute_failure():
 
 
 def test_execute_collects_errors():
-
     builder = PipelineBuilder(
         "Failure Pipeline",
     )
@@ -206,8 +210,111 @@ def test_execute_collects_errors():
     assert "Boom!" in result.errors[0]
 
 
-def test_repr():
+# ---------------------------------------------------------
+# Execution Metrics
+# ---------------------------------------------------------
 
+
+def test_execution_metrics_track_successful_steps():
+    """
+    Verify that successful pipeline steps update execution metrics.
+    """
+
+    executor = PipelineExecutor()
+
+    builder = PipelineBuilder(
+        "Metrics Pipeline",
+    )
+
+    builder.add_step(
+        DummyStep(
+            name="Dummy Step 1",
+        ),
+    )
+
+    builder.add_step(
+        DummyStep(
+            name="Dummy Step 2",
+        ),
+    )
+
+    pipeline = builder.build()
+
+    result = executor.execute(
+        pipeline,
+    )
+
+    assert result.success is True
+
+    assert (
+        result.metrics.steps_total
+        == 2
+    )
+
+    assert (
+        result.metrics.steps_completed
+        == 2
+    )
+
+    assert (
+        result.metrics.steps_failed
+        == 0
+    )
+
+
+def test_execution_metrics_track_failed_steps():
+    """
+    Verify that failed pipeline steps update execution metrics.
+    """
+
+    executor = PipelineExecutor()
+
+    builder = PipelineBuilder(
+        "Metrics Failure Pipeline",
+    )
+
+    builder.add_step(
+        DummyStep(
+            name="Successful Step",
+        ),
+    )
+
+    builder.add_step(
+        FailingStep(
+            name="Failing Step",
+        ),
+    )
+
+    pipeline = builder.build()
+
+    result = executor.execute(
+        pipeline,
+    )
+
+    assert result.success is False
+
+    assert (
+        result.metrics.steps_total
+        == 2
+    )
+
+    assert (
+        result.metrics.steps_completed
+        == 1
+    )
+
+    assert (
+        result.metrics.steps_failed
+        == 1
+    )
+
+
+# ---------------------------------------------------------
+# Representation
+# ---------------------------------------------------------
+
+
+def test_repr():
     executor = PipelineExecutor()
 
     representation = repr(executor)

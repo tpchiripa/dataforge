@@ -17,8 +17,8 @@ class TransformStep(BaseStep):
     """
     Transform pipeline data.
 
-    A transformation is a callable that accepts the current
-    pipeline dataset and returns the transformed dataset.
+    The transformation receives ``context.data`` and must return
+    the transformed dataset.
     """
 
     def __init__(
@@ -47,29 +47,42 @@ class TransformStep(BaseStep):
         if context.data is None:
 
             raise ValueError(
-                "No input data available for transformation."
+                "No input data available for transformation.",
             )
 
         transformed = self.transformation(
             context.data,
         )
 
+        if transformed is None:
+
+            raise ValueError(
+                "Transformation returned no data.",
+            )
+
         context.data = transformed
+
+        records = len(transformed)
 
         context.set(
             "records_transformed",
-            len(transformed),
+            records,
         )
 
         context.add_metadata(
             "records_transformed",
-            len(transformed),
+            records,
         )
 
-        context.add_metadata(
-            "columns_after_transformation",
-            len(transformed.columns),
-        )
+        if hasattr(
+            transformed,
+            "columns",
+        ):
+
+            context.add_metadata(
+                "columns_after_transformation",
+                len(transformed.columns),
+            )
 
         context.add_metadata(
             "transformation",

@@ -18,20 +18,26 @@ class DataFrameStep(BaseStep):
     """
     Execute a Pandas DataFrame operation.
 
-    The operation must accept a DataFrame and return
+    The operation receives ``context.data`` and must return
     a transformed DataFrame.
     """
 
     def __init__(
         self,
         name: str,
-        operation: Callable[[pd.DataFrame], pd.DataFrame],
+        operation: Callable[
+            [pd.DataFrame],
+            pd.DataFrame,
+        ],
         description: str = "",
-    ):
+    ) -> None:
 
         super().__init__(
             name=name,
-            description=description or "DataFrame operation.",
+            description=(
+                description
+                or "DataFrame operation."
+            ),
         )
 
         self.operation = operation
@@ -43,23 +49,37 @@ class DataFrameStep(BaseStep):
         context: PipelineContext,
     ) -> None:
 
-        dataframe = context.data.get("dataframe")
+        dataframe = context.data
 
         if dataframe is None:
 
             raise ValueError(
-                "No dataframe found in pipeline context."
+                "No dataframe found in pipeline context.",
             )
 
-        transformed = self.operation(dataframe)
-
-        if not isinstance(transformed, pd.DataFrame):
+        if not isinstance(
+            dataframe,
+            pd.DataFrame,
+        ):
 
             raise TypeError(
-                "Operation must return a pandas DataFrame."
+                "Pipeline data must be a pandas DataFrame.",
             )
 
-        context.data["dataframe"] = transformed
+        transformed = self.operation(
+            dataframe,
+        )
+
+        if not isinstance(
+            transformed,
+            pd.DataFrame,
+        ):
+
+            raise TypeError(
+                "Operation must return a pandas DataFrame.",
+            )
+
+        context.data = transformed
 
         context.add_metadata(
             "dataframe_step",

@@ -34,7 +34,9 @@ class ExtractStep(BaseStep):
         self.connector = connector
         self.query = query
 
-    # ---------------------------------------------------------
+    # =========================================================
+    # Execution
+    # =========================================================
 
     def execute(
         self,
@@ -44,29 +46,58 @@ class ExtractStep(BaseStep):
         Execute the extraction step.
         """
 
+        # -----------------------------------------------------
+        # Connect to source
+        # -----------------------------------------------------
+
         if not self.connector.connected:
             self.connector.connect()
+
+        # -----------------------------------------------------
+        # Extract data
+        # -----------------------------------------------------
 
         dataframe = self.connector.fetch_dataframe(
             self.query,
         )
 
-        #
+        # -----------------------------------------------------
         # Store extracted dataset
-        #
+        # -----------------------------------------------------
+
         context.data = dataframe
 
-        #
-        # Store commonly used variables
-        #
+        # -----------------------------------------------------
+        # Record extraction metrics
+        # -----------------------------------------------------
+
+        records = len(dataframe)
+
+        context.records_read(
+            records,
+        )
+
+        # -----------------------------------------------------
+        # Runtime variables
+        # -----------------------------------------------------
+
         context.set(
             "records_extracted",
-            len(dataframe),
+            records,
         )
+
+        # -----------------------------------------------------
+        # Execution metadata
+        # -----------------------------------------------------
 
         context.add_metadata(
             "records_extracted",
-            len(dataframe),
+            records,
+        )
+
+        context.add_metadata(
+            "records_read",
+            records,
         )
 
         context.add_metadata(
