@@ -11,6 +11,8 @@ import pandas as pd
 from pipelines.core.exceptions import PipelineValidationError
 from pipelines.core.pipeline_context import PipelineContext
 from pipelines.steps.base.base_step import BaseStep
+from storage.lakehouse.layer import MedallionLayer
+from storage.lakehouse.manager import LakehouseManager
 
 
 class ValidationStep(BaseStep):
@@ -18,7 +20,9 @@ class ValidationStep(BaseStep):
     Validate pipeline data before loading.
 
     Performs baseline validation and records quality metrics
-    for downstream monitoring.
+    for downstream monitoring. When a LakehouseManager is
+    supplied, validated data is landed in the Silver layer of
+    the lakehouse once validation passes.
 
     Future versions will support:
 
@@ -32,12 +36,19 @@ class ValidationStep(BaseStep):
     def __init__(
         self,
         name: str = "Validation",
+        lakehouse: LakehouseManager | None = None,
+        source: str | None = None,
+        table: str | None = None,
     ) -> None:
 
         super().__init__(
             name=name,
             description="Validate pipeline data.",
         )
+
+        self.lakehouse = lakehouse
+        self.source = source
+        self.table = table
 
     # ---------------------------------------------------------
 
@@ -134,3 +145,25 @@ class ValidationStep(BaseStep):
             context.result.records_read,
             records,
         )
+
+        # -----------------------------------------------------
+        # Land validated data in the Silver layer
+        # -----------------------------------------------------
+
+        if self.lakehouse is not None:
+
+            filename = f"{context.execution_id}.csv"
+
+            silver_object = self.lakehouse.write_bytes(
+                layer=MedallionLayer.SILVER,
+                source=self.source or "pipeline",
+                table=self.table or self.name,
+                filename=filename,
+                data=dataframe.to_csv(index=False).encode("utf-8"),
+                content_type="text/csv",
+            )
+
+            context.add_metadata(
+                "silver_key",
+                silver_object.key,
+            )
