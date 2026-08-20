@@ -2,10 +2,13 @@
 DataForge Configuration Package
 """
 
+from configs.loader import loader
+
+loader.load()
+
 from configs.airflow import airflow
 from configs.database import database
 from configs.environment import environment
-from configs.loader import loader
 from configs.logging import logging_settings
 from configs.settings import settings
 from configs.storage import storage
