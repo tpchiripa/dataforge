@@ -230,3 +230,54 @@ def test_configuration_is_retained():
     connector = PostgreSQLConnector(config)
 
     assert connector.config is config
+
+
+# ---------------------------------------------------------
+
+
+@patch(
+    "connectors.databases.postgresql.connector.psycopg2.connect"
+)
+def test_fetch_dataframe(mock_connect):
+
+    mock_connection = MagicMock()
+
+    mock_connection.closed = False
+
+    mock_cursor = MagicMock()
+
+    id_column = MagicMock()
+
+    id_column.name = "id"
+
+    name_column = MagicMock()
+
+    name_column.name = "name"
+
+    mock_cursor.description = [
+        id_column,
+        name_column,
+    ]
+
+    mock_cursor.fetchall.return_value = [
+        (1, "a"),
+        (2, "b"),
+    ]
+
+    mock_connection.cursor.return_value.__enter__.return_value = (
+        mock_cursor
+    )
+
+    mock_connect.return_value = mock_connection
+
+    connector = PostgreSQLConnector(make_config())
+
+    dataframe = connector.fetch_dataframe(
+        "SELECT id, name FROM orders",
+    )
+
+    assert list(dataframe.columns) == ["id", "name"]
+
+    assert len(dataframe) == 2
+
+    assert dataframe.iloc[0]["name"] == "a"

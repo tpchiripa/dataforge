@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import pandas as pd
 import psycopg2
 from psycopg2.extensions import connection
 
@@ -34,7 +35,6 @@ class PostgreSQLConnector(BaseConnector):
     - Bulk loading
     - COPY operations
     - Transactions
-    - DataFrame support
     - Async execution
     """
 
@@ -226,6 +226,46 @@ class PostgreSQLConnector(BaseConnector):
             )
 
             return cursor.fetchall()
+
+    # ---------------------------------------------------------
+
+    def fetch_dataframe(
+        self,
+        query: str,
+        parameters: tuple[Any, ...] | None = None,
+    ) -> pd.DataFrame:
+        """
+        Execute a SELECT query and return the results as a
+        pandas DataFrame, using cursor column names as headers.
+        """
+
+        if not self.connected:
+
+            result = self.connect()
+
+            if not result.success:
+                raise RuntimeError(result.message)
+
+        assert self._connection is not None
+
+        with self._connection.cursor() as cursor:
+
+            cursor.execute(
+                query,
+                parameters,
+            )
+
+            columns = [
+                column.name
+                for column in cursor.description
+            ]
+
+            rows = cursor.fetchall()
+
+            return pd.DataFrame(
+                rows,
+                columns=columns,
+            )
 
     # ---------------------------------------------------------
 

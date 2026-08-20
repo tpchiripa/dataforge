@@ -86,7 +86,7 @@ class ExtractStep(BaseStep):
         )
         context.add_metadata(
             "source_connector",
-            self.connector.get_metadata().name,
+            self.connector.get_metadata()["name"],
         )
         context.add_metadata(
             "extract_query",
@@ -96,18 +96,15 @@ class ExtractStep(BaseStep):
         # Land raw data in the Bronze layer
         # -----------------------------------------------------
         if self.lakehouse is not None:
-
             filename = f"{context.execution_id}.csv"
-
             bronze_object = self.lakehouse.write_bytes(
                 layer=MedallionLayer.BRONZE,
-                source=self.source or self.connector.get_metadata().name,
+                source=self.source or self.connector.get_metadata()["name"],
                 table=self.table or self.name,
                 filename=filename,
                 data=dataframe.to_csv(index=False).encode("utf-8"),
                 content_type="text/csv",
             )
-
             context.add_metadata(
                 "bronze_key",
                 bronze_object.key,
