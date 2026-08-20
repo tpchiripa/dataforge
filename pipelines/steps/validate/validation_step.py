@@ -141,8 +141,7 @@ class ValidationStep(BaseStep):
             True,
         )
 
-        context.result.records_read = max(
-            context.result.records_read,
+        context.records_read(
             records,
         )
 
